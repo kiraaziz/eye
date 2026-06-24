@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGetSources } from "@/hooks/record/useGetSources"
 import { useMicLevel } from "@/hooks/record/useMicLevel"
 import { useSpeakerLevel } from "@/hooks/record/useSpeakerLevel"
+import { useStartRecording } from "@/hooks/record/useStartRecording"
 import { useCameraBubble } from "@/hooks/record/useCameraBubble"
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
@@ -71,6 +72,22 @@ function Recorder() {
       handleSelectScreen(screens[0].id, screens[0].displayId)
     }
   }, [loading, cameras, microphones, speakers, screens])
+
+
+  const { start, stop, isRecording, result } = useStartRecording({
+  cameraId, micId, speakerId, screenId
+})
+
+// start() returns a stop function — store it
+const stopFnRef = useRef<(() => Promise<void>) | null>(null)
+
+const handleRec = async () => {
+  if (isRecording) {
+    await stopFnRef.current?.()
+  } else {
+    stopFnRef.current = (await start()) ?? null
+  }
+}
 
   return (
     <div 
@@ -277,7 +294,7 @@ function Recorder() {
               </div>
             </div>
             <div className='flex flex-col items-center justify-center relative '>
-              <Button size="icon-lg" className='h-18 w-18 rounded-full z-10 font-bold relative'>
+              <Button onClick={handleRec} size="icon-lg" className='h-18 w-18 rounded-full z-10 font-bold relative'>
                 <div style={{ height: `100%` }} className='rounded-full absolute  w-full bg-linear-to-t from-primary to-secondary bottom-0 ease-in-out blur opacity-40 scale-110' />
                 <div className='absolute font-bold flex items-center justify-center gap-1'>
                   <div className='h-2 w-2 bg-secondary rounded-full animate-pulse' />

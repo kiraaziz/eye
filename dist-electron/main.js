@@ -2,6 +2,7 @@ import require$$0, { desktopCapturer, screen, app, BrowserWindow, ipcMain } from
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 async function getScreenSources() {
   const sources = await desktopCapturer.getSources({
     types: ["screen", "window"],
@@ -141,13 +142,14 @@ main.initMain = initMain;
   }
 })(dist, dist.exports);
 var distExports = dist.exports;
-createRequire(import.meta.url);
+const require$1 = createRequire(import.meta.url);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+app.commandLine.appendSwitch("disable-features", "WindowsGraphicsCapture");
 let win;
 function createWindow() {
   win = new BrowserWindow({
@@ -183,28 +185,131 @@ app.on("window-all-closed", () => {
   }
 });
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 app.whenReady().then(createWindow);
 distExports.initMain();
 ipcMain.handle("screen:getSources", getScreenSources);
 ipcMain.handle("screen:setSource", (_, sourceId) => setWindowBounds(sourceId, win));
-ipcMain.handle("window:minimize", () => {
-  win == null ? void 0 : win.minimize();
-});
-ipcMain.handle("window:close", () => {
-  win == null ? void 0 : win.close();
-});
+ipcMain.handle("window:minimize", () => win == null ? void 0 : win.minimize());
+ipcMain.handle("window:close", () => win == null ? void 0 : win.close());
 ipcMain.handle("window:maximize", () => {
   if (!win) return;
-  if (win.isMaximized()) {
-    win.unmaximize();
-  } else {
-    win.maximize();
-  }
+  win.isMaximized() ? win.unmaximize() : win.maximize();
   return win.isMaximized();
+});
+const BUTTON_MAP = { 1: "left", 2: "right", 3: "middle" };
+let uIOhook = null;
+try {
+  uIOhook = require$1("uiohook-napi").uIOhook;
+  console.log("[mouse] uiohook-napi loaded");
+} catch {
+  console.warn("[mouse] uiohook-napi not found — clicks/scroll will not be tracked");
+}
+let mouseInterval = null;
+let mouseEvents = [];
+let sessionStartTime = 0;
+let lastX = -1;
+let lastY = -1;
+const POLL_MS = 50;
+function now() {
+  return Date.now() - sessionStartTime;
+}
+function startMouseTracking() {
+  mouseEvents = [];
+  sessionStartTime = Date.now();
+  lastX = -1;
+  lastY = -1;
+  mouseInterval = setInterval(() => {
+    const { x, y } = screen.getCursorScreenPoint();
+    if (x !== lastX || y !== lastY) {
+      mouseEvents.push({ t: now(), x, y, type: "move" });
+      lastX = x;
+      lastY = y;
+    }
+  }, POLL_MS);
+  if (uIOhook) {
+    uIOhook.removeAllListeners();
+    uIOhook.on("mousedown", (e) => {
+      mouseEvents.push({ t: now(), x: e.x, y: e.y, type: "mousedown", button: BUTTON_MAP[e.button] ?? "left" });
+    });
+    uIOhook.on("mouseup", (e) => {
+      mouseEvents.push({ t: now(), x: e.x, y: e.y, type: "mouseup", button: BUTTON_MAP[e.button] ?? "left" });
+      mouseEvents.push({ t: now(), x: e.x, y: e.y, type: "click", button: BUTTON_MAP[e.button] ?? "left" });
+    });
+    uIOhook.on("wheel", (e) => {
+      mouseEvents.push({
+        t: now(),
+        x: e.x,
+        y: e.y,
+        type: "scroll",
+        scrollDelta: { x: 0, y: e.rotation * e.delta }
+      });
+    });
+    uIOhook.start();
+    console.log("[mouse] tracking started");
+  }
+}
+function stopMouseTracking() {
+  if (mouseInterval) {
+    clearInterval(mouseInterval);
+    mouseInterval = null;
+  }
+  if (uIOhook) {
+    uIOhook.stop();
+    uIOhook.removeAllListeners();
+    console.log("[mouse] tracking stopped, events collected:", mouseEvents.length);
+  }
+  const result = [...mouseEvents];
+  result.sort((a, b) => a.t - b.t);
+  mouseEvents = [];
+  return result;
+}
+function getDisplaysMeta() {
+  const all = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+  const map = (d) => ({
+    id: d.id,
+    label: d.label ?? `Display ${d.id}`,
+    bounds: d.bounds,
+    workArea: d.workArea,
+    scaleFactor: d.scaleFactor,
+    rotation: d.rotation,
+    isPrimary: d.id === primary.id
+  });
+  return { displays: all.map(map), primaryDisplay: map(primary) };
+}
+ipcMain.handle("record:start", async () => {
+  startMouseTracking();
+  const { displays, primaryDisplay } = getDisplaysMeta();
+  return { sessionId: `session_${sessionStartTime}`, displays, primaryDisplay, startedAt: sessionStartTime };
+});
+ipcMain.handle("record:saveTrack", async (_, payload) => {
+  const { type, buffer, sessionId, ext = "webm" } = payload;
+  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const filePath = path.join(sessionDir, `${type}.${ext}`);
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return { filePath };
+});
+ipcMain.handle("record:finalise", async (_, payload) => {
+  const { sessionId, config: config2, savedPaths, durationMs } = payload;
+  const collectedEvents = stopMouseTracking();
+  const { displays, primaryDisplay } = getDisplaysMeta();
+  const toUrl = (p) => p ? `file://${p}` : null;
+  const assets = {
+    camera: toUrl(savedPaths.camera),
+    mic: toUrl(savedPaths.mic),
+    speaker: toUrl(savedPaths.speaker),
+    screen: toUrl(savedPaths.screen)
+  };
+  const meta = { startedAt: sessionStartTime, durationMs, displays, primaryDisplay };
+  const result = { config: config2, assets, meta, mouseEvents: collectedEvents };
+  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
+  fs.mkdirSync(sessionDir, { recursive: true });
+  fs.writeFileSync(path.join(sessionDir, "manifest.json"), JSON.stringify(result, null, 2));
+  console.log("[record] manifest saved →", path.join(sessionDir, "manifest.json"));
+  return result;
 });
 export {
   MAIN_DIST,
