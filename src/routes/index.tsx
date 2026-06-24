@@ -21,7 +21,6 @@ export const Route = createFileRoute('/')({
   component: Recorder,
 })
 
-
 function Recorder() {
 
   const constraintsRef = useRef(null)
@@ -74,10 +73,17 @@ function Recorder() {
   }, [loading, cameras, microphones, speakers, screens])
 
   return (
-    <div className="w-full h-full bg-background/50 flex items-end justify-center p-20 border-dashed border-2 relative overflow-hidden">
+    <div 
+      className="w-full h-full bg-background/50 flex items-end justify-center p-20 border-dashed border-2 relative overflow-hidden cursor-pointer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          window.ipcRenderer.invoke("window:minimize")
+        }
+      }}
+    >
       <div
         ref={constraintsRef}
-        className="absolute inset-5"
+        className="absolute inset-5 pointer-events-none" 
       />
       {!loading && cameraStream && (
         <motion.div
@@ -111,7 +117,8 @@ function Recorder() {
         }}
         dragElastic={0.08}
         dragConstraints={constraintsRef}
-        className='z-10 max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
+        onClick={(e) => e.stopPropagation()} // Prevents dragging/clicking the control box from minimizing the window
+        className='z-10 max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden cursor-default'>
         <div className='flex items-center justify-between w-full border-b bg-muted p-2 border-border/50'>
           <div>
             <Button size="icon" variant="outline">
@@ -286,4 +293,3 @@ function Recorder() {
     </div >
   )
 }
-
