@@ -168,7 +168,7 @@ function createWindow() {
   });
   const displays = screen.getAllDisplays();
   const { x, y, width, height } = displays[0].bounds;
-  win.setBounds({ x, y: height * 0.1, width, height: height * 0.9 });
+  win.setBounds({ x, y, width, height });
   win.setMenu(null);
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);

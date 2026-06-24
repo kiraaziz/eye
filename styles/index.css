@@ -161,3 +161,7 @@ body {
   font-family: "IBM Plex Sans", sans-serif;
 }
 
+
+button{
+  @apply hover:cursor-pointer!
+}

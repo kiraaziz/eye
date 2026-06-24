@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { toast } from "sonner"
 
 export function useGetSources() {
@@ -8,6 +8,8 @@ export function useGetSources() {
     const [screens, setScreens] = useState<any[]>([])
     const [error, setError] = useState(false)
     const [loading, setLoading] = useState(true)
+
+    const retryTimeout = useRef<NodeJS.Timeout | null>(null)
 
     async function loadDevices() {
         try {
@@ -22,18 +24,28 @@ export function useGetSources() {
             setCameras(devices.filter((d) => d.kind === "videoinput"))
             setMicrophones(devices.filter((d) => d.kind === "audioinput"))
             setSpeakers(devices.filter((d) => d.kind === "audiooutput"))
-        } catch (e) {
-            console.log(e)
+
+        } catch (err) {
             toast.error("Unable to access camera, microphone, or screen sources")
             setError(true)
+
+            retryTimeout.current = setTimeout(() => {
+                loadDevices()
+            }, 3000)
+
         } finally {
             setLoading(false)
         }
     }
 
-
     useEffect(() => {
         loadDevices()
+
+        return () => {
+            if (retryTimeout.current) {
+                clearTimeout(retryTimeout.current)
+            }
+        }
     }, [])
 
     return {

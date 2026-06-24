@@ -15,6 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { motion } from "framer-motion"
+import Loader from '@/components/global/Loader'
 
 export const Route = createFileRoute('/')({
   component: Recorder,
@@ -26,6 +27,7 @@ function Recorder() {
   const constraintsRef = useRef(null)
   const { cameras, microphones, speakers, screens, loading } = useGetSources()
 
+  const [open, setOpen] = useState(false)
   const [cameraId, setCameraId] = useState(null)
   const [micId, setMicId] = useState<string | null>(null)
   const [speakerId, setSpeakerId] = useState<string | null>(null)
@@ -47,6 +49,7 @@ function Recorder() {
   const handleSelectScreen = async (id: string, displayId: string | null) => {
     setScreenId(id)
     displayId && await window.ipcRenderer.invoke("screen:setSource", displayId)
+    setOpen(false)
   }
 
 
@@ -71,12 +74,12 @@ function Recorder() {
   }, [loading, cameras, microphones, speakers, screens])
 
   return (
-    <div className="bg-background/50 w-full h-full flex items-end justify-center p-20 border-dashed border-2 relative">
+    <div className="w-full h-full bg-background/50 flex items-end justify-center p-20 border-dashed border-2 relative overflow-hidden">
       <div
         ref={constraintsRef}
         className="absolute inset-5"
       />
-      {cameraStream && (
+      {!loading && cameraStream && (
         <motion.div
           drag
           dragTransition={{
@@ -88,7 +91,7 @@ function Recorder() {
           dragElastic={0.08}
           initial={{ top: 20, left: 20 }}
           dragConstraints={constraintsRef}
-          className="fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-grab active:cursor-grabbing select-none"
+          className=" fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-grab active:cursor-grabbing select-none"
         >
           <video
             autoPlay
@@ -98,7 +101,17 @@ function Recorder() {
           />
         </motion.div>
       )}
-      <div className='z-10 max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
+      {loading ? <Loader /> : <motion.div
+        drag
+        dragTransition={{
+          power: 0.3,
+          timeConstant: 200,
+          bounceStiffness: 300,
+          bounceDamping: 30
+        }}
+        dragElastic={0.08}
+        dragConstraints={constraintsRef}
+        className='z-10 max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
         <div className='flex items-center justify-between w-full border-b bg-muted p-2 border-border/50'>
           <div>
             <Button size="icon" variant="outline">
@@ -167,7 +180,7 @@ function Recorder() {
                 <Button variant="outline" size="icon" className='relative overflow-'>
                   <Monitor className='absolute' />
                 </Button>
-                <Popover>
+                <Popover open={open} onOpenChange={setOpen}>
                   <PopoverTrigger className="flex-1" render={<div className='flex-1 w-full' />}>
                     <Button variant="outline" className='flex-1 justify-start w-full truncate'>
                       <p className='max-w-40'>
@@ -269,7 +282,7 @@ function Recorder() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>}
     </div >
   )
 }
