@@ -22,7 +22,8 @@ export function useGetSources() {
             setCameras(devices.filter((d) => d.kind === "videoinput"))
             setMicrophones(devices.filter((d) => d.kind === "audioinput"))
             setSpeakers(devices.filter((d) => d.kind === "audiooutput"))
-        } catch {
+        } catch (e) {
+            console.log(e)
             toast.error("Unable to access camera, microphone, or screen sources")
             setError(true)
         } finally {
@@ -30,20 +31,9 @@ export function useGetSources() {
         }
     }
 
+
     useEffect(() => {
-        let isMounted = true
-
-        const interval = setInterval(() => {
-            if (!isMounted) return
-            loadDevices()
-        }, 1000)
-
         loadDevices()
-
-        return () => {
-            isMounted = false
-            clearInterval(interval)
-        }
     }, [])
 
     return {

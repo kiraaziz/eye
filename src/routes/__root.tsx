@@ -1,4 +1,3 @@
-import { ModeToggle } from '@/components/global/mode-toggle'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { Toaster } from 'sonner'

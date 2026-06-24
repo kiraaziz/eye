@@ -4,16 +4,17 @@ import { useGetSources } from "@/hooks/record/useGetSources"
 import { useMicLevel } from "@/hooks/record/useMicLevel"
 import { useSpeakerLevel } from "@/hooks/record/useSpeakerLevel"
 import { useCameraBubble } from "@/hooks/record/useCameraBubble"
-import { XMarkIcon } from '@heroicons/react/24/solid'
+import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { Camera, Check, FolderOpen, Mic, Monitor, Volume2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { motion } from "framer-motion"
 
 export const Route = createFileRoute('/')({
   component: Recorder,
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/')({
 
 function Recorder() {
 
+  const constraintsRef = useRef(null)
   const { cameras, microphones, speakers, screens, loading } = useGetSources()
 
   const [cameraId, setCameraId] = useState(null)
@@ -40,13 +42,7 @@ function Recorder() {
     return true
   })
 
-  const {
-    bubblePos,
-    cameraStream,
-    dragOffset,
-    setDragging,
-    videoRef
-  } = useCameraBubble(cameraId)
+  const { cameraStream, videoRef } = useCameraBubble(cameraId)
 
   const handleSelectScreen = async (id: string, displayId: string | null) => {
     setScreenId(id)
@@ -70,28 +66,29 @@ function Recorder() {
     }
 
     if (!screenId && screens.length > 0) {
-      setScreenId(screens[0].deviceId)
+      handleSelectScreen(screens[0].id, screens[0].displayId)
     }
   }, [loading, cameras, microphones, speakers, screens])
 
   return (
-    <div className="w-full h-full flex items-end justify-center p-20 border-dashed border-2">
+    <div className="bg-background/50 w-full h-full flex items-end justify-center p-20 border-dashed border-2 relative">
+      <div
+        ref={constraintsRef}
+        className="absolute inset-5"
+      />
       {cameraStream && (
-        <div
-          className="fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-move select-none"
-          style={{
-            left: bubblePos.x,
-            top: bubblePos.y,
-            position: "fixed",
+        <motion.div
+          drag
+          dragTransition={{
+            power: 0.3,
+            timeConstant: 200,
+            bounceStiffness: 300,
+            bounceDamping: 30
           }}
-          onMouseDown={(e) => {
-            setDragging(true)
-            dragOffset.current = {
-              x: e.clientX - bubblePos.x,
-              y: e.clientY - bubblePos.y,
-            }
-          }}
-          onDragStart={(e) => e.preventDefault()}
+          dragElastic={0.08}
+          initial={{ top: 20, left: 20 }}
+          dragConstraints={constraintsRef}
+          className="fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-grab active:cursor-grabbing select-none"
         >
           <video
             autoPlay
@@ -99,10 +96,9 @@ function Recorder() {
             ref={videoRef}
             className="w-full h-full object-cover"
           />
-        </div>
+        </motion.div>
       )}
-
-      <div className='max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
+      <div className='z-10 max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
         <div className='flex items-center justify-between w-full border-b bg-muted p-2 border-border/50'>
           <div>
             <Button size="icon" variant="outline">
@@ -113,9 +109,23 @@ function Recorder() {
             <img src="./logo.svg" className='h-7' />
             <h1>Kira Eye</h1>
           </div>
-          <Button size="icon-xs" variant="ghost" >
-            <XMarkIcon className="size-4 text-foreground/60" />
-          </Button>
+          <div className='flex items-center justify-center gap-2'>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => window.ipcRenderer.invoke("window:minimize")}
+            >
+              <MinusIcon className="size-5 text-foreground/60" />
+            </Button>
+
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => window.ipcRenderer.invoke("window:close")}
+            >
+              <XMarkIcon className="size-5 text-foreground/60" />
+            </Button>
+          </div>
         </div>
         <div className='p-4'>
           <h1 className='mb-3 text-sm font-light text-foreground/60'>
@@ -158,9 +168,11 @@ function Recorder() {
                   <Monitor className='absolute' />
                 </Button>
                 <Popover>
-                  <PopoverTrigger className="flex-1" render={<div className='flex-1' />}>
-                    <Button variant="outline" className='flex-1 justify-start w-full'>
-                      {(screenId && filteredScreens.find((s) => s.id === screenId)) ? filteredScreens.find((s) => s.id === screenId).name : "Choose screen"}
+                  <PopoverTrigger className="flex-1" render={<div className='flex-1 w-full' />}>
+                    <Button variant="outline" className='flex-1 justify-start w-full truncate'>
+                      <p className='max-w-40'>
+                        {(screenId && filteredScreens.find((s) => s.id === screenId)) ? filteredScreens.find((s) => s.id === screenId).name : "Choose screen"}
+                      </p>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="grid grid-cols-2 gap-2 w-3xl!">

@@ -153,6 +153,8 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     frame: false,
+    vibrancy: "under-window",
+    visualEffectState: "active",
     autoHideMenuBar: true,
     backgroundColor: "#00000000",
     hasShadow: false,
@@ -189,6 +191,21 @@ app.whenReady().then(createWindow);
 distExports.initMain();
 ipcMain.handle("screen:getSources", getScreenSources);
 ipcMain.handle("screen:setSource", (_, sourceId) => setWindowBounds(sourceId, win));
+ipcMain.handle("window:minimize", () => {
+  win == null ? void 0 : win.minimize();
+});
+ipcMain.handle("window:close", () => {
+  win == null ? void 0 : win.close();
+});
+ipcMain.handle("window:maximize", () => {
+  if (!win) return;
+  if (win.isMaximized()) {
+    win.unmaximize();
+  } else {
+    win.maximize();
+  }
+  return win.isMaximized();
+});
 export {
   MAIN_DIST,
   RENDERER_DIST,
