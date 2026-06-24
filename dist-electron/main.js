@@ -1,0 +1,196 @@
+import require$$0, { desktopCapturer, screen, app, BrowserWindow, ipcMain } from "electron";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+async function getScreenSources() {
+  const sources = await desktopCapturer.getSources({
+    types: ["screen", "window"],
+    thumbnailSize: { width: 300, height: 200 },
+    fetchWindowIcons: true
+  });
+  return sources.map((s) => {
+    return {
+      id: s.id,
+      name: s.name,
+      icon: s.appIcon && s.appIcon.toDataURL(),
+      thumbnail: s.thumbnail.toDataURL(),
+      displayId: s.display_id
+    };
+  });
+}
+function setWindowBounds(sourceId, win2) {
+  const displays = screen.getAllDisplays();
+  const display = displays.find((d) => d.id.toString() === sourceId);
+  if (!display || !win2) return;
+  const { x, y, width, height } = display.bounds;
+  win2.setBounds({ x, y, width, height });
+}
+var dist = { exports: {} };
+var renderer = {};
+var config = {};
+Object.defineProperty(config, "__esModule", { value: true });
+config.buildFeatureFlags = config.loopbackAudioTypes = config.featureSwitchKey = config.defaultSourcesOptions = config.ipcEvents = void 0;
+config.ipcEvents = {
+  enableLoopbackAudio: "enable-loopback-audio",
+  disableLoopbackAudio: "disable-loopback-audio"
+};
+config.defaultSourcesOptions = { types: ["screen"] };
+config.featureSwitchKey = "enable-features";
+config.loopbackAudioTypes = {
+  loopback: "loopback",
+  loopbackWithMute: "loopbackWithMute"
+};
+const defaultFeatureFlags = {
+  pulseaudioLoopbackForScreenShare: "PulseaudioLoopbackForScreenShare",
+  macLoopbackAudioForScreenShare: "MacLoopbackAudioForScreenShare"
+};
+const coreAudioTapFeatureFlags = {
+  macCoreAudioTapSystemAudioLoopbackOverride: "MacCatapSystemAudioLoopbackCapture"
+};
+const screenCaptureKitFeatureFlags = {
+  macScreenCaptureKitSystemAudioLoopbackOverride: "MacSckSystemAudioLoopbackOverride"
+};
+const buildFeatureFlags = ({ otherEnabledFeatures, forceCoreAudioTap }) => {
+  const featureFlags = [...Object.values(defaultFeatureFlags), ...otherEnabledFeatures ?? []];
+  if (forceCoreAudioTap) {
+    featureFlags.push(coreAudioTapFeatureFlags.macCoreAudioTapSystemAudioLoopbackOverride);
+  } else {
+    featureFlags.push(screenCaptureKitFeatureFlags.macScreenCaptureKitSystemAudioLoopbackOverride);
+  }
+  return featureFlags.join(",");
+};
+config.buildFeatureFlags = buildFeatureFlags;
+Object.defineProperty(renderer, "__esModule", { value: true });
+renderer.getLoopbackAudioMediaStream = void 0;
+const electron_1$1 = require$$0;
+const config_js_1$1 = config;
+const getLoopbackAudioMediaStream = async (options = {}) => {
+  const { removeVideo = true } = options;
+  await electron_1$1.ipcRenderer.invoke(config_js_1$1.ipcEvents.enableLoopbackAudio);
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  if (removeVideo) {
+    const videoTracks = stream.getVideoTracks();
+    videoTracks.forEach((track) => {
+      track.stop();
+      stream.removeTrack(track);
+    });
+  }
+  await electron_1$1.ipcRenderer.invoke(config_js_1$1.ipcEvents.disableLoopbackAudio);
+  return stream;
+};
+renderer.getLoopbackAudioMediaStream = getLoopbackAudioMediaStream;
+var main = {};
+Object.defineProperty(main, "__esModule", { value: true });
+main.initMain = void 0;
+const electron_1 = require$$0;
+const config_js_1 = config;
+const initMain = (options = {}) => {
+  var _a;
+  const { forceCoreAudioTap = false, loopbackWithMute = false, onAfterGetSources, sessionOverride, sourcesOptions = config_js_1.defaultSourcesOptions } = options;
+  const otherEnabledFeatures = (_a = electron_1.app.commandLine.getSwitchValue(config_js_1.featureSwitchKey)) == null ? void 0 : _a.split(",");
+  if (electron_1.app.commandLine.hasSwitch(config_js_1.featureSwitchKey)) {
+    electron_1.app.commandLine.removeSwitch(config_js_1.featureSwitchKey);
+  }
+  const currentFeatureFlags = (0, config_js_1.buildFeatureFlags)({
+    otherEnabledFeatures,
+    forceCoreAudioTap
+  });
+  electron_1.app.commandLine.appendSwitch(config_js_1.featureSwitchKey, currentFeatureFlags);
+  electron_1.ipcMain.handle(config_js_1.ipcEvents.enableLoopbackAudio, () => {
+    const session = sessionOverride || electron_1.session.defaultSession;
+    session.setDisplayMediaRequestHandler(async (_, callback) => {
+      let sources;
+      try {
+        sources = await electron_1.desktopCapturer.getSources(sourcesOptions);
+        if (onAfterGetSources) {
+          sources = onAfterGetSources(sources);
+        }
+      } catch {
+        throw new Error(`Failed to get sources for system audio loopback capture.`);
+      }
+      if (sources.length === 0) {
+        throw new Error(`No sources found for system audio loopback capture.`);
+      }
+      callback({
+        video: sources[0],
+        audio: loopbackWithMute ? config_js_1.loopbackAudioTypes.loopbackWithMute : config_js_1.loopbackAudioTypes.loopback
+      });
+    });
+  });
+  electron_1.ipcMain.handle(config_js_1.ipcEvents.disableLoopbackAudio, () => {
+    const session = sessionOverride || electron_1.session.defaultSession;
+    session.setDisplayMediaRequestHandler(null);
+  });
+};
+main.initMain = initMain;
+(function(module, exports) {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.initMain = exports.getLoopbackAudioMediaStream = void 0;
+  const renderer_js_1 = renderer;
+  Object.defineProperty(exports, "getLoopbackAudioMediaStream", { enumerable: true, get: function() {
+    return renderer_js_1.getLoopbackAudioMediaStream;
+  } });
+  const main_js_1 = main;
+  Object.defineProperty(exports, "initMain", { enumerable: true, get: function() {
+    return main_js_1.initMain;
+  } });
+  if (process.type === "renderer") {
+    module.exports = { getLoopbackAudioMediaStream: renderer_js_1.getLoopbackAudioMediaStream };
+  } else {
+    module.exports = { initMain: main_js_1.initMain };
+  }
+})(dist, dist.exports);
+var distExports = dist.exports;
+createRequire(import.meta.url);
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    frame: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    transparent: true,
+    resizable: false,
+    webPreferences: {
+      preload: path.join(__dirname$1, "preload.mjs"),
+      nodeIntegration: true,
+      contextIsolation: true
+    }
+  });
+  const displays = screen.getAllDisplays();
+  const { x, y, width, height } = displays[0].bounds;
+  win.setBounds({ x, y: height * 0.1, width, height: height * 0.9 });
+  win.setMenu(null);
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
+}
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
+});
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+app.whenReady().then(createWindow);
+distExports.initMain();
+ipcMain.handle("screen:getSources", getScreenSources);
+ipcMain.handle("screen:setSource", (_, sourceId) => setWindowBounds(sourceId, win));
+export {
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
+};
