@@ -30,9 +30,20 @@ export function useGetSources() {
         }
     }
 
-
     useEffect(() => {
+        let isMounted = true
+
+        const interval = setInterval(() => {
+            if (!isMounted) return
+            loadDevices()
+        }, 1000)
+
         loadDevices()
+
+        return () => {
+            isMounted = false
+            clearInterval(interval)
+        }
     }, [])
 
     return {

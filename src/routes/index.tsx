@@ -1,18 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-// import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { ModeToggle } from '@/components/global/mode-toggle'
 import { useGetSources } from "@/hooks/record/useGetSources"
 import { useMicLevel } from "@/hooks/record/useMicLevel"
 import { useSpeakerLevel } from "@/hooks/record/useSpeakerLevel"
 import { useCameraBubble } from "@/hooks/record/useCameraBubble"
 import { XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
-import { FolderOpen, Mic, Monitor, Play, ScreenShare, Volume2 } from 'lucide-react'
-import { useState } from 'react'
+import { Camera, Check, FolderOpen, Mic, Monitor, Volume2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export const Route = createFileRoute('/')({
   component: Recorder,
@@ -21,31 +22,86 @@ export const Route = createFileRoute('/')({
 
 function Recorder() {
 
-  // const [cameraId, setCameraId] = useState("none")
+  const { cameras, microphones, speakers, screens, loading } = useGetSources()
+
+  const [cameraId, setCameraId] = useState(null)
   const [micId, setMicId] = useState<string | null>(null)
   const [speakerId, setSpeakerId] = useState<string | null>(null)
-  // const [screenId, setScreenId] = useState("")
+  const [screenId, setScreenId] = useState<string | null>(null)
 
-  const { cameras, microphones, speakers, screens } = useGetSources()
   const { micLevel } = useMicLevel(micId)
 
   const { speakerLevel } = useSpeakerLevel(!!speakerId && speakerId !== "none")
+  const [captureMode, setCaptureMode] = useState<any>("screen")
 
-  // const {
-  //   bubblePos,
-  //   cameraStream,
-  //   dragOffset,
-  //   setDragging,
-  //   videoRef
-  // } = useCameraBubble(cameraId)
+  const filteredScreens = screens.filter((s) => {
+    if (captureMode === "screen") return s.id.startsWith("screen")
+    if (captureMode === "window") return s.id.startsWith("window")
+    return true
+  })
 
-  // const handleSelectScreen = async (id: string, displayId: string | null) => {
-  //   setScreenId(id)
-  //   displayId && await window.ipcRenderer.invoke("screen:setSource", displayId)
-  // }
+  const {
+    bubblePos,
+    cameraStream,
+    dragOffset,
+    setDragging,
+    videoRef
+  } = useCameraBubble(cameraId)
+
+  const handleSelectScreen = async (id: string, displayId: string | null) => {
+    setScreenId(id)
+    displayId && await window.ipcRenderer.invoke("screen:setSource", displayId)
+  }
+
+
+  useEffect(() => {
+    if (loading) return
+
+    if (!cameraId && cameras.length > 0) {
+      setCameraId((cameras as any)[0].deviceId)
+    }
+
+    if (!micId && microphones.length > 0) {
+      setMicId(microphones[0].deviceId)
+    }
+
+    if (!speakerId && speakers.length > 0) {
+      setSpeakerId(speakers[0].deviceId)
+    }
+
+    if (!screenId && screens.length > 0) {
+      setScreenId(screens[0].deviceId)
+    }
+  }, [loading, cameras, microphones, speakers, screens])
 
   return (
-    <div className="w-full h-full flex items-end justify-center p-10 ">
+    <div className="w-full h-full flex items-end justify-center p-20 border-dashed border-2">
+      {cameraStream && (
+        <div
+          className="fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-move select-none"
+          style={{
+            left: bubblePos.x,
+            top: bubblePos.y,
+            position: "fixed",
+          }}
+          onMouseDown={(e) => {
+            setDragging(true)
+            dragOffset.current = {
+              x: e.clientX - bubblePos.x,
+              y: e.clientY - bubblePos.y,
+            }
+          }}
+          onDragStart={(e) => e.preventDefault()}
+        >
+          <video
+            autoPlay
+            muted
+            ref={videoRef}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       <div className='max-w-5xl drag-top-bar h-auto w-full bg-background border sahdow rounded-xl overflow-hidden'>
         <div className='flex items-center justify-between w-full border-b bg-muted p-2 border-border/50'>
           <div>
@@ -67,16 +123,19 @@ function Recorder() {
           </h1>
           <div className='grid grid-cols-5'>
             <div className='col-span-2 flex items-center justify-center gap-2'>
-              <div className='hover:cursor-pointer w-full flex-1 h-full bg-muted rounded-xl overflow-hidden relative'>
+              <button onClick={() => setCaptureMode("screen")} className={cn((captureMode === "screen" ? "border-border text-foreground!" : "border-transparent! text-foreground/60"), 'hover:cursor-pointer ease-in-out duration-100 border w-full flex-1 h-full bg-muted rounded-xl overflow-hidden relative')}>
                 <div className='absolute h-20 top-3.5 right-3.5 w-[calc(100%-1.75rem)] bg-foreground/10 border border-foreground border-dashed backdrop-blur rounded overflow-hidden '>
 
                 </div>
                 <img src='/images/mesh-325.png' className=' w-full h-[calc(100%)-2.5rem] object-cover' />
-                <div className='px-2 py-1.5 font-light text-foreground/90 h-10 flex items-center'>
+                <div className='px-2 py-1.5 font-light h-10 flex items-center'>
+                  <div className={cn((captureMode === "screen") ? "w-4" : "w-0 overflow-hidden", 'ease-in-out duration-200 h-4  bg-primary text-primary-foreground flex items-center justify-center rounded-full mr-2')}>
+                    <Check size={13} />
+                  </div>
                   Full screen
                 </div>
-              </div>
-              <div className='hover:cursor-pointer w-full flex-1 h-full bg-muted rounded-xl overflow-hidden relative'>
+              </button>
+              <button onClick={() => setCaptureMode("window")} className={cn((captureMode === "window" ? "border-border   text-foreground!" : "border-transparent! text-foreground/60"), 'hover:cursor-pointer ease-in-out duration-100 border w-full flex-1 h-full bg-muted rounded-xl overflow-hidden relative')}>
                 <div className='absolute h-20 top-3.5 right-3.5 w-[calc(100%-1.75rem)] bg-foreground/50 backdrop-blur rounded-md overflow-hidden '>
                   <div className='h-6 border-b w-full bg-foreground/10 backdrop-blur flex items-center justify-start gap-1 px-2'>
                     <div className='bg-foreground backdrop-blur h-2.5 w-2.5 rounded-full' />
@@ -85,29 +144,55 @@ function Recorder() {
                   </div>
                 </div>
                 <img src='/images/mesh-325.png' className=' w-full h-[calc(100%)-2.5rem] object-cover' />
-                <div className='px-2 py-1.5 font-light text-foreground/90 h-10 flex items-center'>
+                <div className='px-2 py-1.5 font-light  h-10 flex items-center'>
+                  <div className={cn((captureMode === "window") ? "w-4" : "w-0 overflow-hidden", 'ease-in-out duration-200 h-4  bg-primary text-primary-foreground flex items-center justify-center rounded-full mr-2')}>
+                    <Check size={13} />
+                  </div>
                   Window
                 </div>
-              </div>
+              </button>
             </div>
             <div className='mx-2 border-x col-span-2 px-2 space-y-2'>
-              <h1 className='mb-3 text-sm font-light text-foreground/60'>
-                Device setup
-              </h1>
               <div className='w-full flex items-center justify-center gap-2 '>
                 <Button variant="outline" size="icon" className='relative overflow-'>
                   <Monitor className='absolute' />
                 </Button>
+                <Popover>
+                  <PopoverTrigger className="flex-1" render={<div className='flex-1' />}>
+                    <Button variant="outline" className='flex-1 justify-start w-full'>
+                      {(screenId && filteredScreens.find((s) => s.id === screenId)) ? filteredScreens.find((s) => s.id === screenId).name : "Choose screen"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="grid grid-cols-2 gap-2 w-3xl!">
+                    {filteredScreens.map((m) => (
+                      <button className='pointer-events-auto overflow-hidden bg-muted border hover:cursor-pointer rounded-xl' onClick={() => handleSelectScreen(m.id, m.displayId)}>
+                        <img src={m.thumbnail} className='w-full h-50 object-cover object-top-left' />
+                        <div className='p-2 flex items-start text-start text-nowrap truncate '>
+                          <div className={cn((screenId === m.id) ? "w-4" : "w-0 overflow-hidden", 'ease-in-out duration-200 h-4  bg-primary text-primary-foreground flex items-center justify-center rounded-full mr-2')}>
+                            <Check size={13} />
+                          </div>
+                          {m.name || "Screen"}
+                        </div>
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+
+              </div>
+              <div className='w-full flex items-center justify-center gap-2 '>
+                <Button variant="outline" size="icon" className='relative overflow-'>
+                  <Camera className='absolute' />
+                </Button>
                 <div className='flex-1 min-w-0'>
-                  <Select value={micId || ""} onValueChange={setMicId}>
+                  <Select value={cameraId || ""} onValueChange={setCameraId as any}>
                     <SelectTrigger className='w-full'>
-                      <SelectValue placeholder="Choose screen" />
+                      <SelectValue placeholder="Choose camera" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={"none"}>None</SelectItem>
-                      {microphones.map((m) => (
+                      {cameras.map((m) => (
                         <SelectItem key={m.deviceId} value={m.deviceId}>
-                          {m.label || "Screen"}
+                          {m.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -116,7 +201,6 @@ function Recorder() {
               </div>
 
               <div className='w-full flex items-center justify-center gap-2 '>
-
                 <Button variant="outline" size="icon" className='relative overflow-'>
                   <div style={{ height: `${micLevel * 100}%` }} className='absolute  w-full bg-linear-to-t from-primary to-secondary bottom-0 ease-in-out blur' />
                   <Mic className='absolute' />
@@ -174,162 +258,6 @@ function Recorder() {
           </div>
         </div>
       </div>
-
-      {/* {cameraStream && (
-        <div
-          className="fixed z-50 w-48 h-36 rounded-xl overflow-hidden shadow-xl border bg-black cursor-move select-none"
-          style={{
-            left: bubblePos.x,
-            top: bubblePos.y,
-            position: "fixed",
-          }}
-          onMouseDown={(e) => {
-            setDragging(true)
-            dragOffset.current = {
-              x: e.clientX - bubblePos.x,
-              y: e.clientY - bubblePos.y,
-            }
-          }}
-          onDragStart={(e) => e.preventDefault()}
-        >
-          <video
-            autoPlay
-            muted
-            ref={videoRef}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-semibold">Recording Settings</h1>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Camera</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Label>Select camera</Label>
-
-            <Select value={cameraId} onValueChange={setCameraId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose camera" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={"none"}>"none"</SelectItem>
-
-                {cameras.map((c) => (
-                  <SelectItem key={c.deviceId} value={c.deviceId}>
-                    {c.label || "Camera"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Microphone</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="w-3 h-3 rounded-full bg-green-500"
-              style={{
-                transform: `scale(${1 + micLevel * 2})`,
-                opacity: 0.5 + micLevel
-              }}
-            />
-            <Label>Select microphone</Label>
-
-            
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Speaker</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Label>Select speaker</Label>
-            <div
-              className="w-3 h-3 rounded-full bg-green-500"
-              style={{
-                transform: `scale(${1 + speakerLevel * 2})`,
-                opacity: 0.5 + speakerLevel,
-              }}
-            />
-            <Select value={speakerId} onValueChange={setSpeakerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose speaker" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value={"none"}>"none"</SelectItem>
-
-                {speakers.map((s) => (
-                  <SelectItem key={s.deviceId} value={s.deviceId}>
-                    {s.label || "Speaker"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Screen Share</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <Tabs defaultValue="screen" className="w-full">
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="screen">Screen</TabsTrigger>
-                <TabsTrigger value="window">Window / App</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="screen" className="mt-4">
-                <Label>Select screen</Label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {screens
-                    .filter((s) => s.id.startsWith("screen"))
-                    .map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => handleSelectScreen(s.id, s.display_id)}
-                        className={`border rounded-lg p-2 hover:bg-muted transition ${screenId === s.id ? "border-primary" : ""
-                          }`}
-                      >
-                        <img src={s.thumbnail} className="w-full rounded-md mb-2" />
-                        <p className="text-xs truncate">{s.name}</p>
-                      </button>
-                    ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="window" className="mt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {screens
-                    .filter((s) => s.id.startsWith("window"))
-                    .map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => handleSelectScreen(s.id, s.display_id)}
-                        className={`border rounded-lg p-2 hover:bg-muted transition ${screenId === s.id ? "border-primary" : ""
-                          }`}
-                      >
-                        <img src={s.thumbnail} className="w-full rounded-md mb-2" />
-                        <p className="text-xs truncate">{s.name}</p>
-                      </button>
-                    ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div> */}
     </div >
   )
 }
