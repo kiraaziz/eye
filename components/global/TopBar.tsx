@@ -35,7 +35,7 @@ export default function TopBar({ mode = "normal" }: { mode: "record" | "normal" 
                     }}
                 >
                     <img src="/svg/github.svg" className="size-4" />
-                    Records
+                    Github
                 </Button>
             </div>
             <div className="flex items-center justify-center gap-4 text-foreground/70">
