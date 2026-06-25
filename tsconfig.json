@@ -34,7 +34,7 @@
     "lib",
     "components",
     "hooks"
-  ],
+, "types/recording.ts"  ],
   "references": [
     {
       "path": "./tsconfig.node.json"
