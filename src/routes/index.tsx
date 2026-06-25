@@ -28,7 +28,6 @@ function NewRecording() {
 
   const [captureMode, setCaptureMode] = useState<any>('screen')
 
-
   const { start, isRecording } = useStartRecording({
     cameraId,
     micId,

@@ -3,12 +3,25 @@ import { setWindowBounds } from "@/electron/screen/setWindowBounds"
 import { BrowserWindow, ipcMain } from "electron"
 
 export const ipcHandler = (win: BrowserWindow) => {
+
+    ipcMain.handle("window:toggleMode", (_, mode: "overlay" | "bormal") => {
+        if (!win) return
+
+        if (mode === "overlay") {
+            win.setResizable(false)
+
+            const { x, y, width, height } = win.getBounds()
+            win.setBounds({ x, y, width, height })
+
+            win.setAlwaysOnTop(true, "screen-saver")
+        } else {
+            win.setResizable(true)
+            win.setAlwaysOnTop(false)
+
+            win.maximize()
+        }
+    })
     
-    // ipcMain.handle('toggle-window-mode', () => {
-    //     if (win) win = toggleWindowMode(win)
-    // })
-
-
     ipcMain.handle('screen:getSources', getScreenSources)
     ipcMain.handle('screen:setSource', (_, sourceId: string) => {
         setWindowBounds(sourceId, win)

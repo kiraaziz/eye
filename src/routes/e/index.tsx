@@ -48,7 +48,7 @@ function Library() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/new">
+          <Link to="/">
             <Button>
               <CirclePlus className="size-4" />
               New recording
@@ -86,7 +86,7 @@ function Library() {
                 Start your first screen recording
               </p>
             </div>
-            <Link to="/new">
+            <Link to="/">
               <Button>
                 <CirclePlus className="size-4" />
                 New recording

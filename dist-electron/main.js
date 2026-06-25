@@ -8,8 +8,8 @@ const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-function baseOptions() {
-  return {
+function createWindow() {
+  const win2 = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "logo.png"),
     minWidth: 1200,
     minHeight: 600,
@@ -19,26 +19,14 @@ function baseOptions() {
       preload: path.join(__dirname$1, "preload.mjs"),
       nodeIntegration: true,
       contextIsolation: true
-    }
-  };
-}
-function overlayOptions() {
-  return {
+    },
     frame: false,
     autoHideMenuBar: true,
     backgroundColor: "#00000000",
     hasShadow: false,
     transparent: true,
     resizable: false
-  };
-}
-function createWindow(mode = "normal") {
-  const options = mode === "overlay" ? { ...baseOptions(), ...overlayOptions() } : baseOptions();
-  const win2 = new BrowserWindow(options);
-  if (mode === "overlay") {
-    const { x, y, width, height } = win2.getBounds();
-    win2.setBounds({ x, y, width, height });
-  }
+  });
   win2.setMenu(null);
   if (VITE_DEV_SERVER_URL) {
     win2.loadURL(`${VITE_DEV_SERVER_URL}`);
@@ -79,6 +67,19 @@ function setWindowBounds(sourceId, win2) {
   win2.setBounds({ x, y, width, height });
 }
 const ipcHandler = (win2) => {
+  ipcMain.handle("window:toggleMode", (_, mode) => {
+    if (!win2) return;
+    if (mode === "overlay") {
+      win2.setResizable(false);
+      const { x, y, width, height } = win2.getBounds();
+      win2.setBounds({ x, y, width, height });
+      win2.setAlwaysOnTop(true, "screen-saver");
+    } else {
+      win2.setResizable(true);
+      win2.setAlwaysOnTop(false);
+      win2.maximize();
+    }
+  });
   ipcMain.handle("screen:getSources", getScreenSources);
   ipcMain.handle("screen:setSource", (_, sourceId) => {
     setWindowBounds(sourceId, win2);
@@ -325,7 +326,6 @@ function startMouseTracking() {
       });
     });
     uIOhook.start();
-    console.log("[mouse] tracking started");
   }
 }
 function stopMouseTracking() {
@@ -336,7 +336,6 @@ function stopMouseTracking() {
   if (uIOhook) {
     uIOhook.stop();
     uIOhook.removeAllListeners();
-    console.log("[mouse] tracking stopped, events collected:", mouseEvents.length);
   }
   const result = [...mouseEvents];
   result.sort((a, b) => a.t - b.t);
@@ -382,7 +381,6 @@ const finalise = async (_, payload) => {
   const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
   fs.mkdirSync(sessionDir, { recursive: true });
   fs.writeFileSync(path.join(sessionDir, "manifest.json"), JSON.stringify(result, null, 2));
-  console.log("[record] manifest saved →", path.join(sessionDir, "manifest.json"));
   return { sessionId, ...result };
 };
 const saveThumbnail = async (_, payload) => {
@@ -454,7 +452,7 @@ let win;
 distExports.initMain();
 registerEyeMediaScheme();
 app.whenReady().then(() => {
-  win = createWindow("overlay");
+  win = createWindow();
   appHandler();
   ipcHandler(win);
   recorder();

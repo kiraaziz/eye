@@ -2,10 +2,9 @@ import path from 'node:path'
 import { BrowserWindow } from 'electron'
 import { RENDERER_DIST, VITE_DEV_SERVER_URL, __dirname } from '../utils/constant'
 
-export type WindowMode = 'normal' | 'overlay'
 
-function baseOptions() {
-    return {
+export function createWindow(): BrowserWindow {
+    const win = new BrowserWindow({
         icon: path.join(process.env.VITE_PUBLIC!, 'logo.png'),
         minWidth: 1200,
         minHeight: 600,
@@ -16,31 +15,14 @@ function baseOptions() {
             nodeIntegration: true,
             contextIsolation: true,
         },
-    }
-}
 
-function overlayOptions() {
-    return {
         frame: false,
         autoHideMenuBar: true,
         backgroundColor: '#00000000',
         hasShadow: false,
         transparent: true,
         resizable: false,
-    }
-}
-
-export function createWindow(mode: WindowMode = 'normal'): BrowserWindow {
-    const options = mode === 'overlay'
-        ? { ...baseOptions(), ...overlayOptions() }
-        : baseOptions()
-
-    const win = new BrowserWindow(options)
-
-    if (mode === 'overlay') {
-        const { x, y, width, height } = win.getBounds()
-        win.setBounds({ x, y, width, height })
-    }
+    })
 
     win.setMenu(null)
 

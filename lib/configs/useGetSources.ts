@@ -19,13 +19,14 @@ export function useGetSources(): UseGetSourcesReturn {
             await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
             const devices = await navigator.mediaDevices.enumerateDevices()
-            const sources = await (window as any).ipcRenderer.invoke("screen:getSources")
+            const sources = await window.ipcRenderer.invoke("screen:getSources")
 
             setScreens(sources)
             setCameras(devices.filter((d) => d.kind === "videoinput"))
             setMicrophones(devices.filter((d) => d.kind === "audioinput"))
             setSpeakers(devices.filter((d) => d.kind === "audiooutput"))
 
+            await window.ipcRenderer.invoke("window:toggleMode", "overlay")
         } catch (err) {
             toast.error("Unable to access camera, microphone, or screen sources")
             setError(true)

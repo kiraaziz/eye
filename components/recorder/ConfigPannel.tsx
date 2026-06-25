@@ -11,6 +11,7 @@ import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { useMicLevel } from '@/lib/configs/useMicLevel'
 import { useSpeakerLevel } from '@/lib/configs/useSpeakerLevel'
 import { ScreenSource } from '@/types/screen'
+import { toast } from 'sonner'
 
 export default function ConfigPannel({
     cameras, microphones, speakers, screens, loading,
@@ -334,7 +335,13 @@ export default function ConfigPannel({
                         </div>
                         <div className="relative flex flex-col items-center justify-center pt-7">
                             <Button
-                                onClick={() => setCountdown(true)}
+                                onClick={() => {
+                                    if (!screenId) {
+                                        toast.error("Please select a screen before starting the recording.")
+                                        return
+                                    }
+                                    setCountdown(true)
+                                }}
                                 size="icon-lg"
                                 className="relative z-10 h-18 w-18 rounded-full font-bold"
                             >
