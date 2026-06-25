@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EIndexRouteImport } from './routes/e/index'
-import { Route as EEditorSessionIdRouteImport } from './routes/e/editor.$sessionId'
+import { Route as EEditorSessionIdRouteImport } from './routes/e/$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
