@@ -1,77 +1,70 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
-import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
+import { createWindow } from './window/createWindow'
+import { appHandler } from './utils/handlers/app'
+import { ipcHandler } from './utils/handlers/ipc'
 import path from 'node:path'
-import { getScreenSources } from './screen/getSources'
-import { setWindowBounds } from './screen/setWindowBounds'
-import { initMain } from 'electron-audio-loopback'
 import fs from 'node:fs'
-
-const require = createRequire(import.meta.url)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-process.env.APP_ROOT = path.join(__dirname, '..')
-
-export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
-export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
-export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
-
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
-  ? path.join(process.env.APP_ROOT, 'public')
-  : RENDERER_DIST
-
-app.commandLine.appendSwitch('disable-features', 'WindowsGraphicsCapture')
 
 let win: BrowserWindow | null
 
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
-    frame: false,
-    vibrancy: 'under-window',
-    visualEffectState: 'active',
-    autoHideMenuBar: true,
-    backgroundColor: '#00000000',
-    hasShadow: false,
-    transparent: true,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
-      nodeIntegration: true,
-      contextIsolation: true,
-    },
-  })
+app.whenReady().then(() => {
+  win = createWindow('overlay')
 
-  const displays = screen.getAllDisplays()
-  const { x, y, width, height } = displays[0].bounds
-  win.setBounds({ x, y, width, height })
-  win.setMenu(null)
+  appHandler()
+  ipcHandler(win)
 
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL)
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
-  }
-}
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') { app.quit(); win = null }
+  setupEyeMediaProtocol()
 })
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
-})
-app.whenReady().then(createWindow)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { initMain } from 'electron-audio-loopback'
+
+
+
+
+import { registerEyeMediaScheme, setupEyeMediaProtocol, toEyeMediaUrl, getRecordingsRoot } from './utils/mediaProtocol'
 
 initMain()
-ipcMain.handle('screen:getSources', getScreenSources)
-ipcMain.handle('screen:setSource', (_, sourceId: string) => setWindowBounds(sourceId, win))
-ipcMain.handle('window:minimize', () => win?.minimize())
-ipcMain.handle('window:close', () => win?.close())
-ipcMain.handle('window:maximize', () => {
-  if (!win) return
-  win.isMaximized() ? win.unmaximize() : win.maximize()
-  return win.isMaximized()
-})
+
+
+
+
+registerEyeMediaScheme()
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -180,7 +173,7 @@ function startMouseTracking() {
 
     uIOhook.on('mouseup', (e: any) => {
       mouseEvents.push({ t: now(), x: e.x, y: e.y, type: 'mouseup', button: BUTTON_MAP[e.button] ?? 'left' })
-      mouseEvents.push({ t: now(), x: e.x, y: e.y, type: 'click',   button: BUTTON_MAP[e.button] ?? 'left' })
+      mouseEvents.push({ t: now(), x: e.x, y: e.y, type: 'click', button: BUTTON_MAP[e.button] ?? 'left' })
     })
 
     uIOhook.on('wheel', (e: any) => {
@@ -235,10 +228,22 @@ function getDisplaysMeta(): { displays: DisplayInfo[]; primaryDisplay: DisplayIn
 // Recording IPC handlers
 // ---------------------------------------------------------------------------
 
+// Change this variable from const to let so we can update it
+
 ipcMain.handle('record:start', async () => {
-  startMouseTracking()
+  startMouseTracking() // Starts collecting move/click events
   const { displays, primaryDisplay } = getDisplaysMeta()
-  return { sessionId: `session_${sessionStartTime}`, displays, primaryDisplay, startedAt: sessionStartTime }
+  // Return a preliminary timestamp, we will overwrite this below
+  return { sessionId: `session_${Date.now()}`, displays, primaryDisplay, startedAt: Date.now() }
+})
+
+// ADD THIS NEW HANDLER:
+ipcMain.handle('record:syncTimeline', async () => {
+  sessionStartTime = Date.now()
+  // Clear any mouse events recorded during the hardware setup delay
+  mouseEvents = []
+  console.log('[mouse] Timeline synchronized with screen recorder start.')
+  return { startedAt: sessionStartTime }
 })
 
 ipcMain.handle('record:saveTrack', async (_, payload: {
@@ -260,13 +265,13 @@ ipcMain.handle('record:finalise', async (_, payload: {
   config: RecordingConfig
   savedPaths: Partial<RecordingAssets>
   durationMs: number
-}): Promise<RecordingResult> => {
+}): Promise<RecordingResult & { sessionId: string }> => {
   const { sessionId, config, savedPaths, durationMs } = payload
 
   const collectedEvents = stopMouseTracking()
   const { displays, primaryDisplay } = getDisplaysMeta()
 
-  const toUrl = (p?: string | null) => p ? `file://${p}` : null
+  const toUrl = (p?: string | null) => (p ? toEyeMediaUrl(p) : null)
 
   const assets: RecordingAssets = {
     camera: toUrl(savedPaths.camera),
@@ -283,5 +288,77 @@ ipcMain.handle('record:finalise', async (_, payload: {
   fs.writeFileSync(path.join(sessionDir, 'manifest.json'), JSON.stringify(result, null, 2))
 
   console.log('[record] manifest saved →', path.join(sessionDir, 'manifest.json'))
-  return result
+  return { sessionId, ...result }
+})
+
+// ---------------------------------------------------------------------------
+// Recordings library IPC
+// ---------------------------------------------------------------------------
+
+type TrackName = 'screen' | 'camera' | 'mic' | 'speaker'
+
+function assetUrlForTrack(sessionDir: string, track: TrackName): string | null {
+  const filePath = path.join(sessionDir, `${track}.webm`)
+  return fs.existsSync(filePath) ? toEyeMediaUrl(filePath) : null
+}
+
+function resolveAssets(sessionDir: string, raw: RecordingAssets): RecordingAssets {
+  return {
+    screen: raw.screen ? assetUrlForTrack(sessionDir, 'screen') : null,
+    camera: raw.camera ? assetUrlForTrack(sessionDir, 'camera') : null,
+    mic: raw.mic ? assetUrlForTrack(sessionDir, 'mic') : null,
+    speaker: raw.speaker ? assetUrlForTrack(sessionDir, 'speaker') : null,
+  }
+}
+
+ipcMain.handle('recordings:list', async () => {
+  const root = getRecordingsRoot()
+  if (!fs.existsSync(root)) return []
+
+  const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory())
+  const items: Array<{
+    sessionId: string
+    startedAt: number
+    durationMs: number
+    hasScreen: boolean
+    hasCamera: boolean
+    hasMic: boolean
+    hasSpeaker: boolean
+  }> = []
+
+  for (const entry of entries) {
+    const manifestPath = path.join(root, entry.name, 'manifest.json')
+    if (!fs.existsSync(manifestPath)) continue
+
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as RecordingResult
+      items.push({
+        sessionId: entry.name,
+        startedAt: manifest.meta.startedAt,
+        durationMs: manifest.meta.durationMs,
+        hasScreen: !!manifest.assets.screen,
+        hasCamera: !!manifest.assets.camera,
+        hasMic: !!manifest.assets.mic,
+        hasSpeaker: !!manifest.assets.speaker,
+      })
+    } catch {
+      console.warn('[recordings] skipping invalid manifest:', manifestPath)
+    }
+  }
+
+  return items.sort((a, b) => b.startedAt - a.startedAt)
+})
+
+ipcMain.handle('recordings:load', async (_, sessionId: string) => {
+  const sessionDir = path.join(getRecordingsRoot(), sessionId)
+  const manifestPath = path.join(sessionDir, 'manifest.json')
+
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Recording not found: ${sessionId}`)
+  }
+
+  const raw = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as RecordingResult
+  const assets = resolveAssets(sessionDir, raw.assets)
+
+  return { sessionId, ...raw, assets } satisfies RecordingResult & { sessionId: string }
 })

@@ -1,6 +1,7 @@
 import { desktopCapturer } from "electron"
+import { ScreenSource } from "@/types/screen"
 
-export async function getScreenSources() {
+export async function getScreenSources(): Promise<ScreenSource[]> {
     const sources = await desktopCapturer.getSources({
         types: ["screen", "window"],
         thumbnailSize: { width: 300, height: 200 },

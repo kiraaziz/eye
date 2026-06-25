@@ -35,7 +35,6 @@ export function useMicLevel(micId: string | null) {
             const tick = () => {
                 analyser.getByteFrequencyData(dataArray)
 
-                // compute volume (0–1)
                 const avg =
                     dataArray.reduce((a, b) => a + b, 0) / dataArray.length
 

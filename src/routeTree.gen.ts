@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EIndexRouteImport } from './routes/e/index'
+import { Route as EEditorSessionIdRouteImport } from './routes/e/editor.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EIndexRoute = EIndexRouteImport.update({
+  id: '/e/',
+  path: '/e/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EEditorSessionIdRoute = EEditorSessionIdRouteImport.update({
+  id: '/e/editor/$sessionId',
+  path: '/e/editor/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/e/': typeof EIndexRoute
+  '/e/editor/$sessionId': typeof EEditorSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/e': typeof EIndexRoute
+  '/e/editor/$sessionId': typeof EEditorSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/e/': typeof EIndexRoute
+  '/e/editor/$sessionId': typeof EEditorSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/e/' | '/e/editor/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/e' | '/e/editor/$sessionId'
+  id: '__root__' | '/' | '/e/' | '/e/editor/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EIndexRoute: typeof EIndexRoute
+  EEditorSessionIdRoute: typeof EEditorSessionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/e/': {
+      id: '/e/'
+      path: '/e'
+      fullPath: '/e/'
+      preLoaderRoute: typeof EIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e/editor/$sessionId': {
+      id: '/e/editor/$sessionId'
+      path: '/e/editor/$sessionId'
+      fullPath: '/e/editor/$sessionId'
+      preLoaderRoute: typeof EEditorSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EIndexRoute: EIndexRoute,
+  EEditorSessionIdRoute: EEditorSessionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

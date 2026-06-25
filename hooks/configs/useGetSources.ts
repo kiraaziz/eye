@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { toast } from "sonner"
+import { UseGetSourcesReturn } from "@/types/sources"
 
-export function useGetSources() {
+export function useGetSources(): UseGetSourcesReturn {
     const [cameras, setCameras] = useState<MediaDeviceInfo[]>([])
     const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
     const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([])

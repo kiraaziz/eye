@@ -10,13 +10,27 @@ export default defineConfig({
     TanStackRouterVite(),
     react(),
     tailwindcss(),
-    
+
     electron({
       main: {
         entry: 'electron/main.ts',
+        vite: {
+          resolve: {
+            alias: {
+              '@': path.resolve(__dirname, '.'),
+            },
+          },
+        },
       },
       preload: {
         input: path.join(__dirname, 'electron/preload.ts'),
+        vite: {
+          resolve: {
+            alias: {
+              '@': path.resolve(__dirname, '.'),
+            },
+          },
+        },
       },
       renderer: process.env.NODE_ENV === 'test'
         ? undefined

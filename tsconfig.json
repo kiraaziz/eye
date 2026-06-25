@@ -32,8 +32,9 @@
     "src",
     "electron",
     "lib",
-    "components"
-, "App.tsx"  ],
+    "components",
+    "hooks"
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

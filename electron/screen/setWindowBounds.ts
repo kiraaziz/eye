@@ -1,10 +1,10 @@
 import { BrowserWindow, screen } from "electron"
 
-export function setWindowBounds(sourceId: string, win: BrowserWindow | null) {
+export function setWindowBounds(sourceId: string, win: BrowserWindow | null){
     const displays = screen.getAllDisplays()
     const display = displays.find(d => d.id.toString() === sourceId)
 
-    if (!display || !win) return
+    if (!display || !win) return 
 
     const { x, y, width, height } = display.bounds
 

@@ -1,8 +1,56 @@
-import require$$0, { desktopCapturer, screen, app, BrowserWindow, ipcMain } from "electron";
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import require$$0, { BrowserWindow, app, desktopCapturer, screen, ipcMain, protocol, net } from "electron";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+function baseOptions() {
+  return {
+    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    webPreferences: {
+      preload: path.join(__dirname$1, "preload.mjs"),
+      nodeIntegration: true,
+      contextIsolation: true
+    }
+  };
+}
+function overlayOptions() {
+  return {
+    frame: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    transparent: true,
+    resizable: false
+  };
+}
+function createWindow(mode = "normal") {
+  const options = mode === "overlay" ? { ...baseOptions(), ...overlayOptions() } : baseOptions();
+  const win2 = new BrowserWindow(options);
+  if (mode === "overlay") {
+    const { x, y, width, height } = win2.getBounds();
+    win2.setBounds({ x, y, width, height });
+  }
+  win2.setMenu(null);
+  if (VITE_DEV_SERVER_URL) {
+    win2.loadURL(`${VITE_DEV_SERVER_URL}`);
+  } else {
+    win2.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
+  return win2;
+}
+const appHandler = () => {
+  app.commandLine.appendSwitch("disable-features", "WindowsGraphicsCapture");
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  });
+};
 async function getScreenSources() {
   const sources = await desktopCapturer.getSources({
     types: ["screen", "window"],
@@ -26,6 +74,19 @@ function setWindowBounds(sourceId, win2) {
   const { x, y, width, height } = display.bounds;
   win2.setBounds({ x, y, width, height });
 }
+const ipcHandler = (win2) => {
+  ipcMain.handle("screen:getSources", getScreenSources);
+  ipcMain.handle("screen:setSource", (_, sourceId) => {
+    setWindowBounds(sourceId, win2);
+  });
+  ipcMain.handle("window:minimize", () => win2 == null ? void 0 : win2.minimize());
+  ipcMain.handle("window:close", () => win2 == null ? void 0 : win2.close());
+  ipcMain.handle("window:maximize", () => {
+    if (win2) {
+      win2.isMaximized() ? win2.unmaximize() : win2.maximize();
+    }
+  });
+};
 var dist = { exports: {} };
 var renderer = {};
 var config = {};
@@ -142,66 +203,64 @@ main.initMain = initMain;
   }
 })(dist, dist.exports);
 var distExports = dist.exports;
-const require$1 = createRequire(import.meta.url);
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-app.commandLine.appendSwitch("disable-features", "WindowsGraphicsCapture");
-let win;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-    frame: false,
-    vibrancy: "under-window",
-    visualEffectState: "active",
-    autoHideMenuBar: true,
-    backgroundColor: "#00000000",
-    hasShadow: false,
-    transparent: true,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs"),
-      nodeIntegration: true,
-      contextIsolation: true
+const EYE_MEDIA_SCHEME = "eye-media";
+function getRecordingsRoot() {
+  return path.join(app.getPath("userData"), "recordings");
+}
+function toEyeMediaUrl(filePath) {
+  return `${EYE_MEDIA_SCHEME}://local/?path=${encodeURIComponent(filePath)}`;
+}
+function registerEyeMediaScheme() {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: EYE_MEDIA_SCHEME,
+      privileges: {
+        standard: true,
+        secure: true,
+        bypassCSP: true,
+        supportFetchAPI: true,
+        stream: true,
+        corsEnabled: true
+      }
+    }
+  ]);
+}
+function setupEyeMediaProtocol() {
+  const recordingsRoot = path.resolve(getRecordingsRoot());
+  protocol.handle(EYE_MEDIA_SCHEME, (request) => {
+    try {
+      const url = new URL(request.url);
+      const filePath = url.searchParams.get("path");
+      if (!filePath) {
+        return new Response("Missing path", { status: 400 });
+      }
+      const resolved = path.resolve(filePath);
+      const root = recordingsRoot.toLowerCase();
+      if (!resolved.toLowerCase().startsWith(root)) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      if (!fs.existsSync(resolved)) {
+        return new Response("Not found", { status: 404 });
+      }
+      return net.fetch(pathToFileURL(resolved).toString());
+    } catch (err) {
+      return new Response("Internal error", { status: 500 });
     }
   });
-  const displays = screen.getAllDisplays();
-  const { x, y, width, height } = displays[0].bounds;
-  win.setBounds({ x, y, width, height });
-  win.setMenu(null);
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
 }
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+let win;
+app.whenReady().then(() => {
+  win = createWindow("overlay");
+  appHandler();
+  ipcHandler(win);
+  setupEyeMediaProtocol();
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-app.whenReady().then(createWindow);
 distExports.initMain();
-ipcMain.handle("screen:getSources", getScreenSources);
-ipcMain.handle("screen:setSource", (_, sourceId) => setWindowBounds(sourceId, win));
-ipcMain.handle("window:minimize", () => win == null ? void 0 : win.minimize());
-ipcMain.handle("window:close", () => win == null ? void 0 : win.close());
-ipcMain.handle("window:maximize", () => {
-  if (!win) return;
-  win.isMaximized() ? win.unmaximize() : win.maximize();
-  return win.isMaximized();
-});
+registerEyeMediaScheme();
 const BUTTON_MAP = { 1: "left", 2: "right", 3: "middle" };
 let uIOhook = null;
 try {
-  uIOhook = require$1("uiohook-napi").uIOhook;
+  uIOhook = require("uiohook-napi").uIOhook;
   console.log("[mouse] uiohook-napi loaded");
 } catch {
   console.warn("[mouse] uiohook-napi not found — clicks/scroll will not be tracked");
@@ -282,7 +341,13 @@ function getDisplaysMeta() {
 ipcMain.handle("record:start", async () => {
   startMouseTracking();
   const { displays, primaryDisplay } = getDisplaysMeta();
-  return { sessionId: `session_${sessionStartTime}`, displays, primaryDisplay, startedAt: sessionStartTime };
+  return { sessionId: `session_${Date.now()}`, displays, primaryDisplay, startedAt: Date.now() };
+});
+ipcMain.handle("record:syncTimeline", async () => {
+  sessionStartTime = Date.now();
+  mouseEvents = [];
+  console.log("[mouse] Timeline synchronized with screen recorder start.");
+  return { startedAt: sessionStartTime };
 });
 ipcMain.handle("record:saveTrack", async (_, payload) => {
   const { type, buffer, sessionId, ext = "webm" } = payload;
@@ -296,7 +361,7 @@ ipcMain.handle("record:finalise", async (_, payload) => {
   const { sessionId, config: config2, savedPaths, durationMs } = payload;
   const collectedEvents = stopMouseTracking();
   const { displays, primaryDisplay } = getDisplaysMeta();
-  const toUrl = (p) => p ? `file://${p}` : null;
+  const toUrl = (p) => p ? toEyeMediaUrl(p) : null;
   const assets = {
     camera: toUrl(savedPaths.camera),
     mic: toUrl(savedPaths.mic),
@@ -309,10 +374,52 @@ ipcMain.handle("record:finalise", async (_, payload) => {
   fs.mkdirSync(sessionDir, { recursive: true });
   fs.writeFileSync(path.join(sessionDir, "manifest.json"), JSON.stringify(result, null, 2));
   console.log("[record] manifest saved →", path.join(sessionDir, "manifest.json"));
-  return result;
+  return { sessionId, ...result };
 });
-export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
-};
+function assetUrlForTrack(sessionDir, track) {
+  const filePath = path.join(sessionDir, `${track}.webm`);
+  return fs.existsSync(filePath) ? toEyeMediaUrl(filePath) : null;
+}
+function resolveAssets(sessionDir, raw) {
+  return {
+    screen: raw.screen ? assetUrlForTrack(sessionDir, "screen") : null,
+    camera: raw.camera ? assetUrlForTrack(sessionDir, "camera") : null,
+    mic: raw.mic ? assetUrlForTrack(sessionDir, "mic") : null,
+    speaker: raw.speaker ? assetUrlForTrack(sessionDir, "speaker") : null
+  };
+}
+ipcMain.handle("recordings:list", async () => {
+  const root = getRecordingsRoot();
+  if (!fs.existsSync(root)) return [];
+  const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory());
+  const items = [];
+  for (const entry of entries) {
+    const manifestPath = path.join(root, entry.name, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+      items.push({
+        sessionId: entry.name,
+        startedAt: manifest.meta.startedAt,
+        durationMs: manifest.meta.durationMs,
+        hasScreen: !!manifest.assets.screen,
+        hasCamera: !!manifest.assets.camera,
+        hasMic: !!manifest.assets.mic,
+        hasSpeaker: !!manifest.assets.speaker
+      });
+    } catch {
+      console.warn("[recordings] skipping invalid manifest:", manifestPath);
+    }
+  }
+  return items.sort((a, b) => b.startedAt - a.startedAt);
+});
+ipcMain.handle("recordings:load", async (_, sessionId) => {
+  const sessionDir = path.join(getRecordingsRoot(), sessionId);
+  const manifestPath = path.join(sessionDir, "manifest.json");
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Recording not found: ${sessionId}`);
+  }
+  const raw = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+  const assets = resolveAssets(sessionDir, raw.assets);
+  return { sessionId, ...raw, assets };
+});

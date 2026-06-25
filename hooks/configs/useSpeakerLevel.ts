@@ -23,14 +23,14 @@ export function useSpeakerLevel(active: boolean) {
 
         async function startMeter() {
             try {
-                await (window as any).ipcRenderer.invoke("enable-loopback-audio")
+                await window.ipcRenderer.invoke("enable-loopback-audio")
 
                 const stream = await navigator.mediaDevices.getDisplayMedia({
                     video: true,
                     audio: true,
                 })
 
-                await (window as any).ipcRenderer.invoke("disable-loopback-audio")
+                await window.ipcRenderer.invoke("disable-loopback-audio")
 
                 stream.getVideoTracks().forEach((t) => {
                     stream.removeTrack(t)
@@ -54,7 +54,6 @@ export function useSpeakerLevel(active: boolean) {
                 }
                 tick()
             } catch (err) {
-                console.error("Speaker meter failed:", err)
                 setSpeakerLevel(0)
             }
         }
