@@ -1,8 +1,6 @@
-import { Link } from '@tanstack/react-router'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
-import { Camera, Check, Folder, Gauge, Mic, Monitor, Volume2 } from 'lucide-react'
+import { Camera, Check, Gauge, Mic, Monitor, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { motion } from 'framer-motion'
@@ -12,6 +10,7 @@ import { useMicLevel } from '@/lib/configs/useMicLevel'
 import { useSpeakerLevel } from '@/lib/configs/useSpeakerLevel'
 import { ScreenSource } from '@/types/screen'
 import { toast } from 'sonner'
+import TopBar from '../global/TopBar'
 
 export default function ConfigPannel({
     cameras, microphones, speakers, screens, loading,
@@ -93,7 +92,7 @@ export default function ConfigPannel({
         if (!screenId && screens.length > 0) {
             handleSelectScreen(screens[0].id, screens[0].displayId)
         }
-    }, [loading])
+    }, [loading, screens])
 
     return (
         <>
@@ -111,36 +110,7 @@ export default function ConfigPannel({
                 onClick={(e) => e.stopPropagation()}
                 className="drag-top-bar z-10 h-auto w-full max-w-6xl cursor-default overflow-hidden rounded-xl border bg-background sahdow"
             >
-                <div className="flex w-full items-center justify-between border-b border-border/50 bg-muted p-2">
-                    <div>
-                        <Link to="/e">
-                            <Button variant="outline" className='font-light'>
-                                <Folder className="size-4" />
-                                Records
-                            </Button>
-                        </Link>
-                    </div>
-                    <div className="flex items-center justify-center gap-4 text-foreground/70">
-                        <img src="./logo.svg" className="h-7" />
-                        <h1>Kira Eye</h1>
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                        <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            onClick={() => window.ipcRenderer.invoke('window:minimize')}
-                        >
-                            <MinusIcon className="size-5 text-foreground/60" />
-                        </Button>
-                        <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            onClick={() => window.ipcRenderer.invoke('window:close')}
-                        >
-                            <XMarkIcon className="size-5 text-foreground/60" />
-                        </Button>
-                    </div>
-                </div>
+                <TopBar mode='record' />
                 <div className="p-4">
                     <h1 className="mb-3 text-sm font-light text-foreground/60">
                         Please select your recording configuration

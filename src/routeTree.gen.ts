@@ -9,28 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ERouteImport } from './routes/e'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EIndexRouteImport } from './routes/e/index'
 import { Route as ESessionIdRouteImport } from './routes/e/$sessionId'
 
+const ERoute = ERouteImport.update({
+  id: '/e',
+  path: '/e',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EIndexRoute = EIndexRouteImport.update({
-  id: '/e/',
-  path: '/e/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ERoute,
 } as any)
 const ESessionIdRoute = ESessionIdRouteImport.update({
-  id: '/e/$sessionId',
-  path: '/e/$sessionId',
-  getParentRoute: () => rootRouteImport,
+  id: '/$sessionId',
+  path: '/$sessionId',
+  getParentRoute: () => ERoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/e': typeof ERouteWithChildren
   '/e/$sessionId': typeof ESessionIdRoute
   '/e/': typeof EIndexRoute
 }
@@ -42,25 +49,32 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/e': typeof ERouteWithChildren
   '/e/$sessionId': typeof ESessionIdRoute
   '/e/': typeof EIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/e/$sessionId' | '/e/'
+  fullPaths: '/' | '/e' | '/e/$sessionId' | '/e/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/e/$sessionId' | '/e'
-  id: '__root__' | '/' | '/e/$sessionId' | '/e/'
+  id: '__root__' | '/' | '/e' | '/e/$sessionId' | '/e/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ESessionIdRoute: typeof ESessionIdRoute
-  EIndexRoute: typeof EIndexRoute
+  ERoute: typeof ERouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/e': {
+      id: '/e'
+      path: '/e'
+      fullPath: '/e'
+      preLoaderRoute: typeof ERouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,25 +84,36 @@ declare module '@tanstack/react-router' {
     }
     '/e/': {
       id: '/e/'
-      path: '/e'
+      path: '/'
       fullPath: '/e/'
       preLoaderRoute: typeof EIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ERoute
     }
     '/e/$sessionId': {
       id: '/e/$sessionId'
-      path: '/e/$sessionId'
+      path: '/$sessionId'
       fullPath: '/e/$sessionId'
       preLoaderRoute: typeof ESessionIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ERoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+interface ERouteChildren {
+  ESessionIdRoute: typeof ESessionIdRoute
+  EIndexRoute: typeof EIndexRoute
+}
+
+const ERouteChildren: ERouteChildren = {
   ESessionIdRoute: ESessionIdRoute,
   EIndexRoute: EIndexRoute,
+}
+
+const ERouteWithChildren = ERoute._addFileChildren(ERouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  ERoute: ERouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

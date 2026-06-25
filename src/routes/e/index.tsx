@@ -9,8 +9,7 @@ import {
   Film,
   Mic,
   Volume2,
-} from 'lucide-react'
-import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
+} from 'lucide-react' 
 import { useRecordingsList } from '@/lib/loader/useRecordings'
 
 export const Route = createFileRoute('/e/')({
@@ -38,38 +37,7 @@ function Library() {
   const { recordings, loading } = useRecordingsList()
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <img src="./logo.svg" className="h-8" alt="" />
-          <div>
-            <h1 className="text-lg font-medium">Kira Eye</h1>
-            <p className="text-xs text-muted-foreground">Your recordings</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/">
-            <Button>
-              <CirclePlus className="size-4" />
-              New recording
-            </Button>
-          </Link>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => window.ipcRenderer.invoke('window:minimize')}
-          >
-            <MinusIcon className="size-5 text-foreground/60" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => window.ipcRenderer.invoke('window:close')}
-          >
-            <XMarkIcon className="size-5 text-foreground/60" />
-          </Button>
-        </div>
-      </header>
+    <div className="h-full">
 
       <main className="flex-1 overflow-y-auto p-6">
         {loading && (

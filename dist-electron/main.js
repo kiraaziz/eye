@@ -1,4 +1,4 @@
-import require$$0, { BrowserWindow, app, desktopCapturer, screen, ipcMain, protocol, net } from "electron";
+import require$$0, { BrowserWindow, app, desktopCapturer, screen, ipcMain, shell, protocol, net } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -59,15 +59,78 @@ async function getScreenSources() {
     };
   });
 }
-function setWindowBounds(sourceId, win2) {
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+function animateWindowBounds(win2, target, duration = 220) {
+  return new Promise((resolve) => {
+    const start = win2.getBounds();
+    const startTime = Date.now();
+    const tick = () => {
+      if (win2.isDestroyed()) return resolve();
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = easeInOutCubic(t);
+      win2.setBounds({
+        x: Math.round(start.x + (target.x - start.x) * eased),
+        y: Math.round(start.y + (target.y - start.y) * eased),
+        width: Math.round(start.width + (target.width - start.width) * eased),
+        height: Math.round(start.height + (target.height - start.height) * eased)
+      });
+      if (t < 1) {
+        setTimeout(tick, 1e3 / 60);
+      } else {
+        resolve();
+      }
+    };
+    tick();
+  });
+}
+async function setWindowBounds(sourceId, win2) {
   const displays = screen.getAllDisplays();
   const display = displays.find((d) => d.id.toString() === sourceId);
   if (!display || !win2) return;
   const { x, y, width, height } = display.bounds;
-  win2.setBounds({ x, y, width, height });
+  await animateWindowBounds(win2, { x, y, width, height });
 }
+const DEFAULT_WIDTH = 1200;
+const DEFAULT_HEIGHT = 600;
 const ipcHandler = (win2) => {
-  ipcMain.handle("window:toggleMode", (_, mode) => {
+  let isMaximized = false;
+  const maximizeToFullscreen = async () => {
+    const display = screen.getDisplayMatching(win2.getBounds());
+    await animateWindowBounds(win2, display.workArea);
+    isMaximized = true;
+    win2.webContents.send("window:maximized-change", true);
+  };
+  const restoreToDefault = async () => {
+    const display = screen.getDisplayMatching(win2.getBounds());
+    const { x, y, width, height } = display.workArea;
+    await animateWindowBounds(win2, {
+      x: x + Math.round((width - DEFAULT_WIDTH) / 2),
+      y: y + Math.round((height - DEFAULT_HEIGHT) / 2),
+      width: DEFAULT_WIDTH,
+      height: DEFAULT_HEIGHT
+    });
+    isMaximized = false;
+    win2.webContents.send("window:maximized-change", false);
+  };
+  ipcMain.handle("screen:getSources", getScreenSources);
+  ipcMain.handle("screen:setSource", async (_, sourceId) => {
+    await setWindowBounds(sourceId, win2);
+  });
+  ipcMain.handle("window:minimize", () => win2 == null ? void 0 : win2.minimize());
+  ipcMain.handle("window:close", () => win2 == null ? void 0 : win2.close());
+  ipcMain.handle("window:maximize", async () => {
+    if (!win2) return;
+    if (isMaximized) {
+      await restoreToDefault();
+    } else {
+      await maximizeToFullscreen();
+    }
+  });
+  ipcMain.handle("window:isMaximized", () => isMaximized);
+  ipcMain.handle("window:toggleMode", async (_, mode) => {
     if (!win2) return;
     if (mode === "overlay") {
       win2.setResizable(false);
@@ -77,19 +140,13 @@ const ipcHandler = (win2) => {
     } else {
       win2.setResizable(true);
       win2.setAlwaysOnTop(false);
-      win2.maximize();
+      if (!isMaximized) {
+        await maximizeToFullscreen();
+      }
     }
   });
-  ipcMain.handle("screen:getSources", getScreenSources);
-  ipcMain.handle("screen:setSource", (_, sourceId) => {
-    setWindowBounds(sourceId, win2);
-  });
-  ipcMain.handle("window:minimize", () => win2 == null ? void 0 : win2.minimize());
-  ipcMain.handle("window:close", () => win2 == null ? void 0 : win2.close());
-  ipcMain.handle("window:maximize", () => {
-    if (win2) {
-      win2.isMaximized() ? win2.unmaximize() : win2.maximize();
-    }
+  ipcMain.handle("open-external", async (_event, url) => {
+    await shell.openExternal(url);
   });
 };
 var dist = { exports: {} };
