@@ -91,7 +91,7 @@ async function setWindowBounds(sourceId, win2) {
   const display = displays.find((d) => d.id.toString() === sourceId);
   if (!display || !win2) return;
   const { x, y, width, height } = display.bounds;
-  await animateWindowBounds(win2, { x, y, width, height });
+  await animateWindowBounds(win2, { x, y, width, height }, 600);
 }
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 600;

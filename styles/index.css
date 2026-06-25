@@ -167,11 +167,12 @@ button {
   -ms-user-select: none;
 }
 
-.top-bar{
+.top-bar {
   -webkit-app-region: drag;
 }
 
-.top-bar *{
+.top-bar button,
+.top-bar a {
   -webkit-app-region: no-drag;
 }
 
