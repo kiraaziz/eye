@@ -35,7 +35,7 @@ export function animateWindowBounds(
             })
 
             if (t < 1) {
-                setTimeout(tick, 1000 / 60) 
+                setTimeout(tick, 1000 / 500) 
             } else {
                 resolve()
             }

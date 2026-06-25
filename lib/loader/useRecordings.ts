@@ -11,6 +11,7 @@ export function useRecordingsList() {
     try {
       const list = await window.ipcRenderer.invoke('recordings:list')
       await window.ipcRenderer.invoke("window:toggleMode", "normal")
+      await window.ipcRenderer.invoke('window:maximize')
 
       setRecordings(list as RecordingListItem[])
     } catch (err) {
@@ -20,11 +21,21 @@ export function useRecordingsList() {
     }
   }, [])
 
+  const deleteRecording = useCallback(async (sessionId: string) => {
+    try {
+      await window.ipcRenderer.invoke('recordings:delete', sessionId)
+      setRecordings((prev) => prev.filter((r) => r.sessionId !== sessionId))
+      toast.success('Recording deleted')
+    } catch (err) {
+      toast.error('Failed to delete recording')
+    }
+  }, [])
+
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  return { recordings, loading, refresh }
+  return { recordings, loading, refresh, deleteRecording }
 }
 
 export function useRecording(sessionId: string) {

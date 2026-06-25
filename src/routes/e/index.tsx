@@ -1,5 +1,16 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import Loader from '@/components/global/Loader'
 import { cn } from '@/lib/utils'
 import {
@@ -8,9 +19,11 @@ import {
   Clock,
   Film,
   Mic,
+  Trash2,
   Volume2,
-} from 'lucide-react' 
+} from 'lucide-react'
 import { useRecordingsList } from '@/lib/loader/useRecordings'
+import type { RecordingListItem } from '@/types/recording'
 
 export const Route = createFileRoute('/e/')({
   component: Library,
@@ -34,11 +47,20 @@ function formatDuration(ms: number): string {
 }
 
 function Library() {
-  const { recordings, loading } = useRecordingsList()
+  const { recordings, loading, deleteRecording } = useRecordingsList()
+  const [pendingDelete, setPendingDelete] = useState<RecordingListItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    await deleteRecording(pendingDelete.sessionId)
+    setDeleting(false)
+    setPendingDelete(null)
+  }
 
   return (
     <div className="h-full">
-
       <main className="flex-1 overflow-y-auto p-6">
         {loading && (
           <div className="flex h-64 items-center justify-center">
@@ -96,13 +118,55 @@ function Library() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">Edit</span>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Edit</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setPendingDelete(item)
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </article>
               </Link>
             ))}
           </div>
         )}
       </main>
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete recording?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete &&
+                `This will permanently delete the recording from ${formatDate(
+                  pendingDelete.startedAt
+                )}. This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

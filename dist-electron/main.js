@@ -78,7 +78,7 @@ function animateWindowBounds(win2, target, duration = 220) {
         height: Math.round(start.height + (target.height - start.height) * eased)
       });
       if (t < 1) {
-        setTimeout(tick, 1e3 / 60);
+        setTimeout(tick, 1e3 / 500);
       } else {
         resolve();
       }
@@ -91,7 +91,7 @@ async function setWindowBounds(sourceId, win2) {
   const display = displays.find((d) => d.id.toString() === sourceId);
   if (!display || !win2) return;
   const { x, y, width, height } = display.bounds;
-  await animateWindowBounds(win2, { x, y, width, height }, 600);
+  await animateWindowBounds(win2, { x, y, width, height });
 }
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 600;
@@ -134,7 +134,9 @@ const ipcHandler = (win2) => {
     if (!win2) return;
     if (mode === "overlay") {
       win2.setResizable(false);
-      const { x, y, width, height } = win2.getBounds();
+      const winBounds = win2.getBounds();
+      const display = screen.getDisplayMatching(winBounds);
+      const { x, y, width, height } = display.workArea;
       win2.setBounds({ x, y, width, height });
       win2.setAlwaysOnTop(true, "screen-saver");
     } else {
@@ -501,9 +503,18 @@ const loadRecord = async (_, sessionId) => {
   const assets = resolveAssets(sessionDir, raw.assets);
   return { sessionId, ...raw, assets };
 };
+const deleteRecord = async (_, sessionId) => {
+  const sessionDir = path.join(getRecordingsRoot(), sessionId);
+  if (!fs.existsSync(sessionDir)) {
+    throw new Error(`Recording not found: ${sessionId}`);
+  }
+  fs.rmSync(sessionDir, { recursive: true, force: true });
+  return { sessionId };
+};
 const loader = () => {
   ipcMain.handle("recordings:list", listRecord);
   ipcMain.handle("recordings:load", loadRecord);
+  ipcMain.handle("recordings:delete", deleteRecord);
 };
 let win;
 distExports.initMain();

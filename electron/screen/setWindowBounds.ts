@@ -9,5 +9,5 @@ export async function setWindowBounds(sourceId: string, win: BrowserWindow | nul
 
     const { x, y, width, height } = display.bounds
 
-    await animateWindowBounds(win, { x, y, width, height }, 600)
+    await animateWindowBounds(win, { x, y, width, height })
 }

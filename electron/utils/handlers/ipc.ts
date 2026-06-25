@@ -55,7 +55,10 @@ export const ipcHandler = (win: BrowserWindow) => {
         if (mode === "overlay") {
             win.setResizable(false)
 
-            const { x, y, width, height } = win.getBounds()
+            const winBounds = win.getBounds()
+            const display = screen.getDisplayMatching(winBounds)
+
+            const { x, y, width, height } = display.workArea
             win.setBounds({ x, y, width, height })
 
             win.setAlwaysOnTop(true, "screen-saver")
