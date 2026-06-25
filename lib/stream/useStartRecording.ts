@@ -10,7 +10,7 @@ import { recordStream } from './recordStream'
 import { saveTrack } from './saveTrack'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { QUALITY_PRESETS } from './qualityPresets'
+import { QUALITY_PRESETS } from '../configs/qualityPresets'
 import { captureThumbnail } from './captureThumbnail'
 
 export async function saveThumbnail(
@@ -44,6 +44,8 @@ export function useStartRecording(config: RecordingConfig) {
     const thumbnails: Partial<Record<TrackType, Blob>> = {}
 
     try {
+      window.ipcRenderer.invoke('window:minimize')
+
       if (config.micId && config.micId !== 'none') {
         const micStream = await navigator.mediaDevices.getUserMedia({
           audio: { deviceId: { exact: config.micId } },
@@ -117,8 +119,6 @@ export function useStartRecording(config: RecordingConfig) {
         const rec = recordStream(screenStream, 'video/webm;codecs=vp9', { videoBitsPerSecond: quality.videoBitsPerSecond })
         recorders.push({ type: 'screen', ...rec })
       }
-
-      // window.ipcRenderer.invoke('window:minimize')
 
       streamsRef.current = streams
       stoppers.current = recorders.map((r) => r.stop)

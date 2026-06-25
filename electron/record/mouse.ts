@@ -56,7 +56,6 @@ export function startMouseTracking() {
         })
 
         uIOhook.start()
-        console.log('[mouse] tracking started')
     }
 }
 
@@ -66,7 +65,6 @@ export function stopMouseTracking(): MouseEventEntry[] {
     if (uIOhook) {
         uIOhook.stop()
         uIOhook.removeAllListeners()
-        console.log('[mouse] tracking stopped, events collected:', mouseEvents.length)
     }
 
     const result = [...mouseEvents]

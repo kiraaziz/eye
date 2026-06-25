@@ -36,6 +36,5 @@ export const finalise = async (_: any, payload: {
     fs.mkdirSync(sessionDir, { recursive: true })
     fs.writeFileSync(path.join(sessionDir, 'manifest.json'), JSON.stringify(result, null, 2))
 
-    console.log('[record] manifest saved →', path.join(sessionDir, 'manifest.json'))
     return { sessionId, ...result }
 }
