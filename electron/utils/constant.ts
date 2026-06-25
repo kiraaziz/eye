@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-export const __dirname = path.dirname(fileURLToPath(import.meta.url))
+export const __dirname = path.dirname(fileURLToPath(import.meta.url)) 
 
 process.env.APP_ROOT = path.join(__dirname, '..')
 

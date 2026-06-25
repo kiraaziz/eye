@@ -90,7 +90,7 @@ function Library() {
             {recordings.map((item) => (
               <Link
                 key={item.sessionId}
-                to="/editor/$sessionId"
+                to="/e/$sessionId"
                 params={{ sessionId: item.sessionId }}
                 className="block"
               >

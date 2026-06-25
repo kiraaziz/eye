@@ -2,6 +2,7 @@ import require$$0, { BrowserWindow, app, desktopCapturer, screen, ipcMain, shell
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -337,12 +338,13 @@ function getDisplaysMeta() {
     primaryDisplay: map(primary)
   };
 }
+const require$1 = createRequire(import.meta.url);
 const BUTTON_MAP = { 1: "left", 2: "right", 3: "middle" };
 let uIOhook = null;
 try {
-  uIOhook = require("uiohook-napi").uIOhook;
-} catch {
-  console.warn("[mouse] uiohook-napi not found — clicks/scroll will not be tracked");
+  uIOhook = require$1("uiohook-napi").uIOhook;
+} catch (e) {
+  console.warn("[mouse] uiohook-napi not found — clicks/scroll will not be tracked", e);
 }
 let mouseInterval = null;
 let mouseEvents = [];
