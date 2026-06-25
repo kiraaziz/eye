@@ -1,12 +1,16 @@
 import path from 'node:path'
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow } from 'electron'
 import { RENDERER_DIST, VITE_DEV_SERVER_URL, __dirname } from '../utils/constant'
 
 export type WindowMode = 'normal' | 'overlay'
 
 function baseOptions() {
     return {
-        icon: path.join(process.env.VITE_PUBLIC!, 'electron-vite.svg'),
+        icon: path.join(process.env.VITE_PUBLIC!, 'logo.png'),
+        minWidth: 1200,
+        minHeight: 600,
+        width: 1200,
+        height: 600,
         webPreferences: {
             preload: path.join(__dirname, 'preload.mjs'),
             nodeIntegration: true,

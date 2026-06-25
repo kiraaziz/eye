@@ -17,7 +17,7 @@ initMain()
 registerEyeMediaScheme()
 
 app.whenReady().then(() => {
-  win = createWindow('normal')
+  win = createWindow('overlay')
 
   appHandler()
   ipcHandler(win)

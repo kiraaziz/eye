@@ -10,7 +10,11 @@ const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 function baseOptions() {
   return {
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    icon: path.join(process.env.VITE_PUBLIC, "logo.png"),
+    minWidth: 1200,
+    minHeight: 600,
+    width: 1200,
+    height: 600,
     webPreferences: {
       preload: path.join(__dirname$1, "preload.mjs"),
       nodeIntegration: true,
@@ -450,7 +454,7 @@ let win;
 distExports.initMain();
 registerEyeMediaScheme();
 app.whenReady().then(() => {
-  win = createWindow("normal");
+  win = createWindow("overlay");
   appHandler();
   ipcHandler(win);
   recorder();

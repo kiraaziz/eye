@@ -118,6 +118,8 @@ export function useStartRecording(config: RecordingConfig) {
         recorders.push({ type: 'screen', ...rec })
       }
 
+      // window.ipcRenderer.invoke('window:minimize')
+
       streamsRef.current = streams
       stoppers.current = recorders.map((r) => r.stop)
 
