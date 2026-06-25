@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useGetSources } from '@/lib/configs/useGetSources'
 import { useMicLevel } from '@/lib/configs/useMicLevel'
@@ -6,19 +6,20 @@ import { useSpeakerLevel } from '@/lib/configs/useSpeakerLevel'
 import { useCameraBubble } from '@/lib/configs/useCameraBubble'
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Camera, Check, Mic, Monitor, Volume2 } from 'lucide-react'
+import { ArrowLeft, Camera, Check, Gauge, Mic, Monitor, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { motion } from 'framer-motion'
 import Loader from '@/components/global/Loader'
 import { useStartRecording } from '@/lib/stream/useStartRecording'
+import { QualityPreset } from '@/lib/stream/qualityPresets'
 
 export const Route = createFileRoute("/")({
   component: NewRecording,
 })
 
-function NewRecording() { 
+function NewRecording() {
   const constraintsRef = useRef(null)
   const { cameras, microphones, speakers, screens, loading } = useGetSources()
 
@@ -39,6 +40,16 @@ function NewRecording() {
   })
 
   const { cameraStream, videoRef } = useCameraBubble(cameraId)
+
+
+  const [quality, setQuality] = useState<QualityPreset>('high')
+
+  const QUALITY_LABELS: Record<QualityPreset, string> = {
+    low: 'Low (720p)',
+    medium: 'Medium (1080p)',
+    high: 'High (1080p60)',
+    ultra: 'Ultra (1440p60)',
+  }
 
   const handleSelectScreen = async (id: string, displayId: string | null) => {
     setScreenId(id)
@@ -68,6 +79,7 @@ function NewRecording() {
     micId,
     speakerId,
     screenId,
+    quality
   })
 
   const stopFnRef = useRef<(() => Promise<void>) | null>(null)
@@ -264,6 +276,25 @@ function NewRecording() {
                         {cameras.map((m) => (
                           <SelectItem key={m.deviceId} value={m.deviceId}>
                             {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex w-full items-center justify-center gap-2">
+                  <Button variant="outline" size="icon" className="relative overflow-">
+                    <Gauge className="absolute" />
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <Select value={quality} onValueChange={(v) => setQuality(v as QualityPreset)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose quality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(QUALITY_LABELS) as QualityPreset[]).map((q) => (
+                          <SelectItem key={q} value={q}>
+                            {QUALITY_LABELS[q]}
                           </SelectItem>
                         ))}
                       </SelectContent>

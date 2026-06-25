@@ -1,6 +1,7 @@
 export function recordStream(
     stream: MediaStream,
-    mimeType = 'video/webm;codecs=vp9,opus'
+    mimeType = 'video/webm;codecs=vp9,opus',
+    options?: { videoBitsPerSecond?: number; audioBitsPerSecond?: number }
 ): { stop: () => void; result: Promise<ArrayBuffer> } {
     const chunks: Blob[] = []
     let resolveResult!: (buf: ArrayBuffer) => void
@@ -17,7 +18,11 @@ export function recordStream(
             ? 'video/webm'
             : ''
 
-    const recorder = new MediaRecorder(stream, safeMime ? { mimeType: safeMime } : {})
+    const recorder = new MediaRecorder(stream, {
+        ...(safeMime ? { mimeType: safeMime } : {}),
+        ...(options?.videoBitsPerSecond ? { videoBitsPerSecond: options.videoBitsPerSecond } : {}),
+        ...(options?.audioBitsPerSecond ? { audioBitsPerSecond: options.audioBitsPerSecond } : {}),
+    })
 
     recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data)

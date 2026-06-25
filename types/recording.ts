@@ -5,6 +5,7 @@ export type RecordingConfig = {
   micId: string | null
   speakerId: string | null
   screenId: string | null
+  quality?: 'low' | 'medium' | 'high' | 'ultra'
 }
 
 export type RecordingAssets = {
@@ -12,6 +13,8 @@ export type RecordingAssets = {
   mic: string | null
   speaker: string | null
   screen: string | null
+  cameraThumbnail?: string | null
+  screenThumbnail?: string | null
 }
 
 export type DisplayInfo = {

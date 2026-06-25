@@ -361,7 +361,7 @@ const syncTimeline = async () => {
   };
 };
 const finalise = async (_, payload) => {
-  const { sessionId, config: config2, savedPaths, durationMs } = payload;
+  const { sessionId, config: config2, savedPaths, thumbnailPaths, durationMs } = payload;
   const collectedEvents = stopMouseTracking();
   const { displays, primaryDisplay } = getDisplaysMeta();
   const toUrl = (p) => p ? toEyeMediaUrl(p) : null;
@@ -369,7 +369,9 @@ const finalise = async (_, payload) => {
     camera: toUrl(savedPaths.camera),
     mic: toUrl(savedPaths.mic),
     speaker: toUrl(savedPaths.speaker),
-    screen: toUrl(savedPaths.screen)
+    screen: toUrl(savedPaths.screen),
+    cameraThumbnail: toUrl(thumbnailPaths == null ? void 0 : thumbnailPaths.camera),
+    screenThumbnail: toUrl(thumbnailPaths == null ? void 0 : thumbnailPaths.screen)
   };
   const meta = { startedAt: sessionStartTime, durationMs, displays, primaryDisplay };
   const result = { config: config2, assets, meta, mouseEvents: collectedEvents };
@@ -379,11 +381,20 @@ const finalise = async (_, payload) => {
   console.log("[record] manifest saved →", path.join(sessionDir, "manifest.json"));
   return { sessionId, ...result };
 };
+const saveThumbnail = async (_, payload) => {
+  const { type, buffer, sessionId } = payload;
+  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const filePath = path.join(sessionDir, `${type}-thumb.jpg`);
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return { filePath };
+};
 const recorder = () => {
   ipcMain.handle("record:saveTrack", saveTrack);
   ipcMain.handle("record:start", startRecord);
   ipcMain.handle("record:syncTimeline", syncTimeline);
   ipcMain.handle("record:finalise", finalise);
+  ipcMain.handle("record:saveThumbnail", saveThumbnail);
 };
 const listRecord = async () => {
   const root = getRecordingsRoot();
@@ -439,7 +450,7 @@ let win;
 distExports.initMain();
 registerEyeMediaScheme();
 app.whenReady().then(() => {
-  win = createWindow("overlay");
+  win = createWindow("normal");
   appHandler();
   ipcHandler(win);
   recorder();

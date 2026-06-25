@@ -10,9 +10,10 @@ export const finalise = async (_: any, payload: {
     sessionId: string
     config: RecordingConfig
     savedPaths: Partial<RecordingAssets>
+    thumbnailPaths?: Partial<Record<'camera' | 'screen', string>>
     durationMs: number
 }): Promise<RecordingResult & { sessionId: string }> => {
-    const { sessionId, config, savedPaths, durationMs } = payload
+    const { sessionId, config, savedPaths, thumbnailPaths, durationMs } = payload
 
     const collectedEvents = stopMouseTracking()
     const { displays, primaryDisplay } = getDisplaysMeta()
@@ -24,6 +25,8 @@ export const finalise = async (_: any, payload: {
         mic: toUrl(savedPaths.mic),
         speaker: toUrl(savedPaths.speaker),
         screen: toUrl(savedPaths.screen),
+        cameraThumbnail: toUrl(thumbnailPaths?.camera),
+        screenThumbnail: toUrl(thumbnailPaths?.screen),
     }
 
     const meta: RecordingMeta = { startedAt: sessionStartTime, durationMs, displays, primaryDisplay }
