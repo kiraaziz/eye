@@ -248,20 +248,35 @@ function setupEyeMediaProtocol() {
     }
   });
 }
-let win;
-app.whenReady().then(() => {
-  win = createWindow("overlay");
-  appHandler();
-  ipcHandler(win);
-  setupEyeMediaProtocol();
-});
-distExports.initMain();
-registerEyeMediaScheme();
+const saveTrack = async (_, payload) => {
+  const { type, buffer, sessionId, ext = "webm" } = payload;
+  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const filePath = path.join(sessionDir, `${type}.${ext}`);
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return { filePath };
+};
+function getDisplaysMeta() {
+  const all = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+  const map = (d) => ({
+    id: d.id,
+    label: d.label ?? `Display ${d.id}`,
+    bounds: d.bounds,
+    workArea: d.workArea,
+    scaleFactor: d.scaleFactor,
+    rotation: d.rotation,
+    isPrimary: d.id === primary.id
+  });
+  return {
+    displays: all.map(map),
+    primaryDisplay: map(primary)
+  };
+}
 const BUTTON_MAP = { 1: "left", 2: "right", 3: "middle" };
 let uIOhook = null;
 try {
   uIOhook = require("uiohook-napi").uIOhook;
-  console.log("[mouse] uiohook-napi loaded");
 } catch {
   console.warn("[mouse] uiohook-napi not found — clicks/scroll will not be tracked");
 }
@@ -324,40 +339,28 @@ function stopMouseTracking() {
   mouseEvents = [];
   return result;
 }
-function getDisplaysMeta() {
-  const all = screen.getAllDisplays();
-  const primary = screen.getPrimaryDisplay();
-  const map = (d) => ({
-    id: d.id,
-    label: d.label ?? `Display ${d.id}`,
-    bounds: d.bounds,
-    workArea: d.workArea,
-    scaleFactor: d.scaleFactor,
-    rotation: d.rotation,
-    isPrimary: d.id === primary.id
-  });
-  return { displays: all.map(map), primaryDisplay: map(primary) };
+function resetSession() {
+  mouseEvents = [];
+  sessionStartTime = Date.now();
+  return sessionStartTime;
 }
-ipcMain.handle("record:start", async () => {
+const startRecord = async () => {
   startMouseTracking();
   const { displays, primaryDisplay } = getDisplaysMeta();
-  return { sessionId: `session_${Date.now()}`, displays, primaryDisplay, startedAt: Date.now() };
-});
-ipcMain.handle("record:syncTimeline", async () => {
-  sessionStartTime = Date.now();
-  mouseEvents = [];
-  console.log("[mouse] Timeline synchronized with screen recorder start.");
-  return { startedAt: sessionStartTime };
-});
-ipcMain.handle("record:saveTrack", async (_, payload) => {
-  const { type, buffer, sessionId, ext = "webm" } = payload;
-  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
-  fs.mkdirSync(sessionDir, { recursive: true });
-  const filePath = path.join(sessionDir, `${type}.${ext}`);
-  fs.writeFileSync(filePath, Buffer.from(buffer));
-  return { filePath };
-});
-ipcMain.handle("record:finalise", async (_, payload) => {
+  return {
+    sessionId: `session_${Date.now()}`,
+    displays,
+    primaryDisplay,
+    startedAt: Date.now()
+  };
+};
+const syncTimeline = async () => {
+  const startedAt = resetSession();
+  return {
+    startedAt
+  };
+};
+const finalise = async (_, payload) => {
   const { sessionId, config: config2, savedPaths, durationMs } = payload;
   const collectedEvents = stopMouseTracking();
   const { displays, primaryDisplay } = getDisplaysMeta();
@@ -375,20 +378,14 @@ ipcMain.handle("record:finalise", async (_, payload) => {
   fs.writeFileSync(path.join(sessionDir, "manifest.json"), JSON.stringify(result, null, 2));
   console.log("[record] manifest saved →", path.join(sessionDir, "manifest.json"));
   return { sessionId, ...result };
-});
-function assetUrlForTrack(sessionDir, track) {
-  const filePath = path.join(sessionDir, `${track}.webm`);
-  return fs.existsSync(filePath) ? toEyeMediaUrl(filePath) : null;
-}
-function resolveAssets(sessionDir, raw) {
-  return {
-    screen: raw.screen ? assetUrlForTrack(sessionDir, "screen") : null,
-    camera: raw.camera ? assetUrlForTrack(sessionDir, "camera") : null,
-    mic: raw.mic ? assetUrlForTrack(sessionDir, "mic") : null,
-    speaker: raw.speaker ? assetUrlForTrack(sessionDir, "speaker") : null
-  };
-}
-ipcMain.handle("recordings:list", async () => {
+};
+const recorder = () => {
+  ipcMain.handle("record:saveTrack", saveTrack);
+  ipcMain.handle("record:start", startRecord);
+  ipcMain.handle("record:syncTimeline", syncTimeline);
+  ipcMain.handle("record:finalise", finalise);
+};
+const listRecord = async () => {
   const root = getRecordingsRoot();
   if (!fs.existsSync(root)) return [];
   const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory());
@@ -408,12 +405,23 @@ ipcMain.handle("recordings:list", async () => {
         hasSpeaker: !!manifest.assets.speaker
       });
     } catch {
-      console.warn("[recordings] skipping invalid manifest:", manifestPath);
     }
   }
   return items.sort((a, b) => b.startedAt - a.startedAt);
-});
-ipcMain.handle("recordings:load", async (_, sessionId) => {
+};
+function assetUrlForTrack(sessionDir, track) {
+  const filePath = path.join(sessionDir, `${track}.webm`);
+  return fs.existsSync(filePath) ? toEyeMediaUrl(filePath) : null;
+}
+function resolveAssets(sessionDir, raw) {
+  return {
+    screen: raw.screen ? assetUrlForTrack(sessionDir, "screen") : null,
+    camera: raw.camera ? assetUrlForTrack(sessionDir, "camera") : null,
+    mic: raw.mic ? assetUrlForTrack(sessionDir, "mic") : null,
+    speaker: raw.speaker ? assetUrlForTrack(sessionDir, "speaker") : null
+  };
+}
+const loadRecord = async (_, sessionId) => {
   const sessionDir = path.join(getRecordingsRoot(), sessionId);
   const manifestPath = path.join(sessionDir, "manifest.json");
   if (!fs.existsSync(manifestPath)) {
@@ -422,4 +430,19 @@ ipcMain.handle("recordings:load", async (_, sessionId) => {
   const raw = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
   const assets = resolveAssets(sessionDir, raw.assets);
   return { sessionId, ...raw, assets };
+};
+const loader = () => {
+  ipcMain.handle("recordings:list", listRecord);
+  ipcMain.handle("recordings:load", loadRecord);
+};
+let win;
+distExports.initMain();
+registerEyeMediaScheme();
+app.whenReady().then(() => {
+  win = createWindow("overlay");
+  appHandler();
+  ipcHandler(win);
+  recorder();
+  loader();
+  setupEyeMediaProtocol();
 });

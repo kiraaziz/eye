@@ -132,7 +132,7 @@ export function useStartRecording(config: RecordingConfig) {
 
         navigate({
           to: '/e/$sessionId',
-          params: { id: recordingResult.sessionId }
+          params: { sessionId: recordingResult.sessionId }
         })
 
       } catch (err) {

@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useGetSources } from '@/hooks/configs/useGetSources'
-import { useMicLevel } from '@/hooks/configs/useMicLevel'
-import { useSpeakerLevel } from '@/hooks/configs/useSpeakerLevel'
-import { useStartRecording } from '@/hooks/record/useStartRecording'
-import { useCameraBubble } from '@/hooks/configs/useCameraBubble'
+import { useGetSources } from '@/lib/configs/useGetSources'
+import { useMicLevel } from '@/lib/configs/useMicLevel'
+import { useSpeakerLevel } from '@/lib/configs/useSpeakerLevel'
+import { useCameraBubble } from '@/lib/configs/useCameraBubble'
 import { MinusIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Camera, Check, Mic, Monitor, Volume2 } from 'lucide-react'
@@ -13,13 +12,13 @@ import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { motion } from 'framer-motion'
 import Loader from '@/components/global/Loader'
+import { useStartRecording } from '@/lib/stream/useStartRecording'
 
 export const Route = createFileRoute("/")({
   component: NewRecording,
 })
 
-function NewRecording() {
-  const navigate = useNavigate()
+function NewRecording() { 
   const constraintsRef = useRef(null)
   const { cameras, microphones, speakers, screens, loading } = useGetSources()
 
@@ -64,7 +63,7 @@ function NewRecording() {
     }
   }, [loading, cameras, microphones, speakers, screens])
 
-  const { start, isRecording, result } = useStartRecording({
+  const { start, isRecording } = useStartRecording({
     cameraId,
     micId,
     speakerId,
@@ -80,15 +79,6 @@ function NewRecording() {
       stopFnRef.current = (await start()) ?? null
     }
   }
-
-  useEffect(() => {
-    if (result?.sessionId) {
-      navigate({
-        to: '/editor/$sessionId',
-        params: { sessionId: result.sessionId },
-      })
-    }
-  }, [result, navigate])
 
   return (
     <div
