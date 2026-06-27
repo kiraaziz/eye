@@ -1,9 +1,8 @@
 import { screen } from 'electron'
-import { MouseEventEntry } from "@/types/recording"
 import { createRequire } from 'node:module'
+import { MouseButton, MouseEventEntry } from 'types/mouse'
 
 const require = createRequire(import.meta.url)
-export type MouseButton = 'left' | 'right' | 'middle'
 
 const BUTTON_MAP: Record<number, MouseButton> = { 1: 'left', 2: 'right', 3: 'middle' }
 
@@ -11,7 +10,7 @@ let uIOhook: any = null
 try {
     uIOhook = require('uiohook-napi').uIOhook
 } catch (e) {
-    console.warn('[mouse] uiohook-napi not found — clicks/scroll will not be tracked', e) // add `e` here
+    console.warn('[mouse] uiohook-napi not found — clicks/scroll will not be tracked', e) 
 }
 
 let mouseInterval: ReturnType<typeof setInterval> | null = null

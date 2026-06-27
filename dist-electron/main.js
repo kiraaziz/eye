@@ -1,4 +1,4 @@
-import require$$0, { BrowserWindow, app, desktopCapturer, screen, ipcMain, shell, protocol, net } from "electron";
+import require$$0, { BrowserWindow, protocol, net, app, screen, desktopCapturer, ipcMain, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -10,7 +10,7 @@ path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 function createWindow() {
-  const win2 = new BrowserWindow({
+  const win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "logo.png"),
     minWidth: 1200,
     minHeight: 600,
@@ -28,130 +28,14 @@ function createWindow() {
     transparent: true,
     resizable: false
   });
-  win2.setMenu(null);
+  win.setMenu(null);
   if (VITE_DEV_SERVER_URL) {
-    win2.loadURL(`${VITE_DEV_SERVER_URL}`);
+    win.loadURL(`${VITE_DEV_SERVER_URL}`);
   } else {
-    win2.loadFile(path.join(RENDERER_DIST, "index.html"));
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
-  return win2;
+  return win;
 }
-const appHandler = () => {
-  app.commandLine.appendSwitch("disable-features", "WindowsGraphicsCapture");
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit();
-    }
-  });
-};
-async function getScreenSources() {
-  const sources = await desktopCapturer.getSources({
-    types: ["screen", "window"],
-    thumbnailSize: { width: 300, height: 200 },
-    fetchWindowIcons: true
-  });
-  return sources.map((s) => {
-    return {
-      id: s.id,
-      name: s.name,
-      icon: s.appIcon && s.appIcon.toDataURL(),
-      thumbnail: s.thumbnail.toDataURL(),
-      displayId: s.display_id
-    };
-  });
-}
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-function animateWindowBounds(win2, target, duration = 220) {
-  return new Promise((resolve) => {
-    const start = win2.getBounds();
-    const startTime = Date.now();
-    const tick = () => {
-      if (win2.isDestroyed()) return resolve();
-      const elapsed = Date.now() - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      const eased = easeInOutCubic(t);
-      win2.setBounds({
-        x: Math.round(start.x + (target.x - start.x) * eased),
-        y: Math.round(start.y + (target.y - start.y) * eased),
-        width: Math.round(start.width + (target.width - start.width) * eased),
-        height: Math.round(start.height + (target.height - start.height) * eased)
-      });
-      if (t < 1) {
-        setTimeout(tick, 1e3 / 500);
-      } else {
-        resolve();
-      }
-    };
-    tick();
-  });
-}
-async function setWindowBounds(sourceId, win2) {
-  const displays = screen.getAllDisplays();
-  const display = displays.find((d) => d.id.toString() === sourceId);
-  if (!display || !win2) return;
-  const { x, y, width, height } = display.bounds;
-  await animateWindowBounds(win2, { x, y, width, height });
-}
-const DEFAULT_WIDTH = 1200;
-const DEFAULT_HEIGHT = 600;
-const ipcHandler = (win2) => {
-  let isMaximized = false;
-  const maximizeToFullscreen = async () => {
-    const display = screen.getDisplayMatching(win2.getBounds());
-    await animateWindowBounds(win2, display.workArea);
-    isMaximized = true;
-    win2.webContents.send("window:maximized-change", true);
-  };
-  const restoreToDefault = async () => {
-    const display = screen.getDisplayMatching(win2.getBounds());
-    const { x, y, width, height } = display.workArea;
-    await animateWindowBounds(win2, {
-      x: x + Math.round((width - DEFAULT_WIDTH) / 2),
-      y: y + Math.round((height - DEFAULT_HEIGHT) / 2),
-      width: DEFAULT_WIDTH,
-      height: DEFAULT_HEIGHT
-    });
-    isMaximized = false;
-    win2.webContents.send("window:maximized-change", false);
-  };
-  ipcMain.handle("screen:getSources", getScreenSources);
-  ipcMain.handle("screen:setSource", async (_, sourceId) => {
-    await setWindowBounds(sourceId, win2);
-  });
-  ipcMain.handle("window:minimize", () => win2 == null ? void 0 : win2.minimize());
-  ipcMain.handle("window:close", () => win2 == null ? void 0 : win2.close());
-  ipcMain.handle("window:maximize", async () => {
-    if (!win2) return;
-    if (isMaximized) {
-      await restoreToDefault();
-    } else {
-      await maximizeToFullscreen();
-    }
-  });
-  ipcMain.handle("window:isMaximized", () => isMaximized);
-  ipcMain.handle("window:toggleMode", async (_, mode) => {
-    if (!win2) return;
-    if (mode === "overlay") {
-      win2.setResizable(false);
-      const winBounds = win2.getBounds();
-      const display = screen.getDisplayMatching(winBounds);
-      const { x, y, width, height } = display.workArea;
-      win2.setBounds({ x, y, width, height });
-      win2.setAlwaysOnTop(true, "screen-saver");
-    } else {
-      win2.setResizable(true);
-      win2.setAlwaysOnTop(false);
-      if (!isMaximized) {
-        await maximizeToFullscreen();
-      }
-    }
-  });
-  ipcMain.handle("open-external", async (_event, url) => {
-    await shell.openExternal(url);
-  });
-};
 var dist = { exports: {} };
 var renderer = {};
 var config = {};
@@ -313,14 +197,6 @@ function setupEyeMediaProtocol() {
     }
   });
 }
-const saveTrack = async (_, payload) => {
-  const { type, buffer, sessionId, ext = "webm" } = payload;
-  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
-  fs.mkdirSync(sessionDir, { recursive: true });
-  const filePath = path.join(sessionDir, `${type}.${ext}`);
-  fs.writeFileSync(filePath, Buffer.from(buffer));
-  return { filePath };
-};
 function getDisplaysMeta() {
   const all = screen.getAllDisplays();
   const primary = screen.getPrimaryDisplay();
@@ -408,22 +284,6 @@ function resetSession() {
   sessionStartTime = Date.now();
   return sessionStartTime;
 }
-const startRecord = async () => {
-  startMouseTracking();
-  const { displays, primaryDisplay } = getDisplaysMeta();
-  return {
-    sessionId: `session_${Date.now()}`,
-    displays,
-    primaryDisplay,
-    startedAt: Date.now()
-  };
-};
-const syncTimeline = async () => {
-  const startedAt = resetSession();
-  return {
-    startedAt
-  };
-};
 const finalise = async (_, payload) => {
   const { sessionId, config: config2, savedPaths, thumbnailPaths, durationMs } = payload;
   const collectedEvents = stopMouseTracking();
@@ -452,12 +312,29 @@ const saveThumbnail = async (_, payload) => {
   fs.writeFileSync(filePath, Buffer.from(buffer));
   return { filePath };
 };
-const recorder = () => {
-  ipcMain.handle("record:saveTrack", saveTrack);
-  ipcMain.handle("record:start", startRecord);
-  ipcMain.handle("record:syncTimeline", syncTimeline);
-  ipcMain.handle("record:finalise", finalise);
-  ipcMain.handle("record:saveThumbnail", saveThumbnail);
+const saveTrack = async (_, payload) => {
+  const { type, buffer, sessionId, ext = "webm" } = payload;
+  const sessionDir = path.join(app.getPath("userData"), "recordings", sessionId);
+  fs.mkdirSync(sessionDir, { recursive: true });
+  const filePath = path.join(sessionDir, `${type}.${ext}`);
+  fs.writeFileSync(filePath, Buffer.from(buffer));
+  return { filePath };
+};
+const startRecord = async () => {
+  startMouseTracking();
+  const { displays, primaryDisplay } = getDisplaysMeta();
+  return {
+    sessionId: `session_${Date.now()}`,
+    displays,
+    primaryDisplay,
+    startedAt: Date.now()
+  };
+};
+const syncTimeline = async () => {
+  const startedAt = resetSession();
+  return {
+    startedAt
+  };
 };
 const listRecord = async () => {
   const root = getRecordingsRoot();
@@ -513,19 +390,65 @@ const deleteRecord = async (_, sessionId) => {
   fs.rmSync(sessionDir, { recursive: true, force: true });
   return { sessionId };
 };
-const loader = () => {
-  ipcMain.handle("recordings:list", listRecord);
-  ipcMain.handle("recordings:load", loadRecord);
-  ipcMain.handle("recordings:delete", deleteRecord);
-};
-let win;
+async function getScreenSources() {
+  const sources = await desktopCapturer.getSources({
+    types: ["screen", "window"],
+    thumbnailSize: { width: 300, height: 200 },
+    fetchWindowIcons: true
+  });
+  return sources.map((s) => {
+    return {
+      id: s.id,
+      name: s.name,
+      icon: s.appIcon && s.appIcon.toDataURL(),
+      thumbnail: s.thumbnail.toDataURL(),
+      displayId: s.display_id
+    };
+  });
+}
+async function setWindowBounds(sourceId, win) {
+  const displays = screen.getAllDisplays();
+  const display = displays.find((d) => d.id.toString() === sourceId);
+  if (!display || !win) return;
+  const { x, y, width, height } = display.bounds;
+  win.setBounds({ x, y, width, height });
+}
 distExports.initMain();
 registerEyeMediaScheme();
 app.whenReady().then(() => {
-  win = createWindow();
-  appHandler();
-  ipcHandler(win);
-  recorder();
-  loader();
+  const win = createWindow();
+  ipcMain.handle("recordings:list", listRecord);
+  ipcMain.handle("recordings:load", loadRecord);
+  ipcMain.handle("recordings:delete", deleteRecord);
+  ipcMain.handle("record:saveTrack", saveTrack);
+  ipcMain.handle("record:start", startRecord);
+  ipcMain.handle("record:syncTimeline", syncTimeline);
+  ipcMain.handle("record:finalise", finalise);
+  ipcMain.handle("record:saveThumbnail", saveThumbnail);
+  app.commandLine.appendSwitch("disable-features", "WindowsGraphicsCapture");
+  app.on("window-all-closed", () => process.platform !== "darwin" && app.quit());
+  ipcMain.handle("screen:getSources", getScreenSources);
+  ipcMain.handle("screen:setSource", async (_, sourceId) => await setWindowBounds(sourceId, win));
+  ipcMain.handle("window:minimize", () => win == null ? void 0 : win.minimize());
+  ipcMain.handle("window:close", () => win == null ? void 0 : win.close());
+  ipcMain.handle("window:maximize", () => (win == null ? void 0 : win.isMaximized()) ? win.unmaximize() : win == null ? void 0 : win.maximize());
+  ipcMain.handle("window:isMaximized", () => (win == null ? void 0 : win.isMaximized()) ?? false);
+  win == null ? void 0 : win.on("maximize", () => win == null ? void 0 : win.webContents.send("window:maximized-change", true));
+  win == null ? void 0 : win.on("unmaximize", () => win == null ? void 0 : win.webContents.send("window:maximized-change", false));
+  ipcMain.handle("open-external", async (_event, url) => await shell.openExternal(url));
+  ipcMain.handle("window:toggleMode", async (_, mode) => {
+    if (!win) return;
+    if (mode === "overlay") {
+      win.setResizable(false);
+      const winBounds = win.getBounds();
+      const display = screen.getDisplayMatching(winBounds);
+      const { x, y, width, height } = display.workArea;
+      win.setBounds({ x, y, width, height });
+    } else {
+      win.setResizable(true);
+      win.setSize(1024, 720);
+      win.center();
+    }
+  });
   setupEyeMediaProtocol();
 });

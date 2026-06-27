@@ -1,10 +1,11 @@
-import { RecordingAssets, RecordingConfig, RecordingMeta, RecordingResult } from "@/types/recording"
 import { toEyeMediaUrl } from "../utils/mediaProtocol"
 import { getDisplaysMeta } from "../screen/getDisplaysMeta"
 import { sessionStartTime, stopMouseTracking } from "./mouse"
 import { app } from "electron"
 import path from 'node:path'
 import fs from 'node:fs'
+import { RecordingMeta, RecordingResult } from "types/recording"
+import { RecordingAssets, RecordingConfig } from "types/configs"
 
 export const finalise = async (_: any, payload: {
     sessionId: string
@@ -20,7 +21,7 @@ export const finalise = async (_: any, payload: {
 
     const toUrl = (p?: string | null) => (p ? toEyeMediaUrl(p) : null)
 
-    const assets: RecordingAssets = {
+    const assets: RecordingAssets & any = {
         camera: toUrl(savedPaths.camera),
         mic: toUrl(savedPaths.mic),
         speaker: toUrl(savedPaths.speaker),

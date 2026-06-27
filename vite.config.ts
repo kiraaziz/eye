@@ -5,6 +5,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
+const electronAliases = {
+  'electron/record': path.resolve(__dirname, 'electron/record'),
+  'electron/data': path.resolve(__dirname, 'electron/data'),
+  'electron/screen': path.resolve(__dirname, 'electron/screen'),
+  'electron/window': path.resolve(__dirname, 'electron/window'),
+  'electron/utils': path.resolve(__dirname, 'electron/utils'),
+  'types': path.resolve(__dirname, 'types'),
+}
+
 export default defineConfig({
   plugins: [
     TanStackRouterVite(),
@@ -18,6 +27,7 @@ export default defineConfig({
           resolve: {
             alias: {
               '@': path.resolve(__dirname, '.'),
+              ...electronAliases,
             },
           },
         },
@@ -28,6 +38,7 @@ export default defineConfig({
           resolve: {
             alias: {
               '@': path.resolve(__dirname, '.'),
+              ...electronAliases,
             },
           },
         },

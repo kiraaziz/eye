@@ -1,5 +1,5 @@
-import { DisplayInfo } from '@/types/recording';
 import { screen } from 'electron'
+import { DisplayInfo } from 'types/screen';
 
 export function getDisplaysMeta(): { displays: DisplayInfo[]; primaryDisplay: DisplayInfo } {
     const all = screen.getAllDisplays()

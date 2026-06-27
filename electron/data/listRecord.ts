@@ -1,4 +1,4 @@
-import { RecordingResult } from "@/types/recording"
+import { RecordingResult } from "types/recording"
 import { getRecordingsRoot } from "../utils/mediaProtocol"
 import path from 'node:path'
 import fs from 'node:fs'
