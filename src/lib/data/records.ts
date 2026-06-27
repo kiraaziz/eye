@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import type { RecordingListItem, SavedRecording } from '@/types/recording'
+import type { RecordingListItem, SavedRecording } from 'types/recording'
 
 export function useRecordingsList() {
   const [recordings, setRecordings] = useState<RecordingListItem[]>([])

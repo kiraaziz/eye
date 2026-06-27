@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useGetSources } from '@/lib/configs/useGetSources'
 import { useRef, useState } from 'react'
-import Loader from '@/components/global/Loader'
-import { useStartRecording } from '@/lib/stream/useStartRecording'
-import { QualityPreset } from '@/lib/configs/qualityPresets'
+import Loader from '@/components/global/Loader' 
 import CountdownOverlay from '@/components/recorder/CountdownOverlay'
 import CameraBubble from '@/components/recorder/CameraBubble'
 import Overlay from '@/components/recorder/Overlay'
 import ConfigPannel from '@/components/recorder/ConfigPannel'
 import { Button } from '@/components/ui/button'
+import { RecordingConfig } from 'types/recording'
+import { getSources } from '@/lib/panel/getSources'
+import { startRecording } from '@/lib/panel/startRecording'
 
 export const Route = createFileRoute("/")({
   component: NewRecording,
@@ -16,28 +16,24 @@ export const Route = createFileRoute("/")({
 
 function NewRecording() {
 
-  const { cameras, microphones, speakers, screens, loading } = useGetSources()
-
   const [countdown, setCountdown] = useState(false)
-
-  const [cameraId, setCameraId] = useState(null)
-  const [micId, setMicId] = useState<string | null>(null)
-  const [speakerId, setSpeakerId] = useState<string | null>(null)
-  const [screenId, setScreenId] = useState<string | null>(null)
-  const [quality, setQuality] = useState<QualityPreset>('high')
-
   const [captureMode, setCaptureMode] = useState<any>('screen')
 
-  const { start, isRecording } = useStartRecording({
-    cameraId,
-    micId,
-    speakerId,
-    screenId,
-    quality
+  const [config, setConfig] = useState<RecordingConfig>({
+    cameraId: null,
+    micId: null,
+    speakerId: null,
+    screenId: null,
+    quality: 'high',
   })
 
-  const stopFnRef = useRef<(() => Promise<void>) | null>(null)
+  const updateConfig = (patch: Partial<RecordingConfig>) =>
+    setConfig((prev) => ({ ...prev, ...patch }))
 
+  const sources = getSources()
+  const { start, isRecording } = startRecording(config)
+
+  const stopFnRef = useRef<(() => Promise<void>) | null>(null)
   const handleRec = async () => {
     if (isRecording) {
       await stopFnRef.current?.()
@@ -46,12 +42,12 @@ function NewRecording() {
     }
   }
 
-  if (loading) return <Loader />
+  if (sources.loading) return <Loader />
 
   return (
     <div className="relative flex h-full w-full items-end justify-center overflow-hidden p-20" >
       <Overlay showFrame={!isRecording && captureMode === "screen"} />
-      <CameraBubble cameraId={cameraId} />
+      <CameraBubble cameraId={config.cameraId} />
       {countdown && <CountdownOverlay
         start={countdown}
         onComplete={() => {
@@ -65,14 +61,10 @@ function NewRecording() {
       </Button>}
       {!countdown && !isRecording && <ConfigPannel
         {...{
-          cameras, microphones, speakers, screens, loading,
+          ...sources,
           setCountdown,
-          cameraId, setCameraId,
-          micId, setMicId,
-          speakerId, setSpeakerId,
-          screenId, setScreenId,
+          config, updateConfig,
           captureMode, setCaptureMode,
-          quality, setQuality,
         }}
       />}
     </div>

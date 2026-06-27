@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
-
-type MouseEventType = 'click' | 'mousedown' | 'mouseup' | 'scroll'
-type MouseButton = 'left' | 'right' | 'middle'
+import { MouseButton, MouseEventType } from "types/mouse";
 
 const BUTTON_MAP: Record<number, MouseButton> = { 0: 'left', 1: 'middle', 2: 'right' }
 
 
-export function useMouseTracker() {
+export function mouseTracker() {
     const isTracking = useRef(false)
 
     const sendEvent = useCallback((

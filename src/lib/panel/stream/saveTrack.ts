@@ -1,4 +1,4 @@
-import type { TrackType } from '@/types/recording'
+import { TrackType } from "types/configs"
 
 export async function saveTrack(type: TrackType, buffer: ArrayBuffer, sessionId: string): Promise<string> {
     const { filePath } = await window.ipcRenderer.invoke('record:saveTrack', {

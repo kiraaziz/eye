@@ -4,7 +4,7 @@ import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 
-export const Route = createFileRoute('/e')({
+export const Route = createFileRoute('/_editor/e')({
     component: RouteComponent,
 })
 

@@ -1,4 +1,4 @@
-import { useCameraBubble } from "@/lib/configs/useCameraBubble"
+import { useCameraBubble } from '@/lib/panel/useCameraBubble'
 import { motion } from 'framer-motion'
 import { useRef } from "react"
 

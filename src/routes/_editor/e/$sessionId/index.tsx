@@ -5,9 +5,9 @@ import Loader from '@/components/global/Loader'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { RecordingResult } from '@/../types/recording'
-import { useRecording } from '@/lib/loader/useRecordings'
+import { useRecording } from '@/lib/loader/records'
 
-export const Route = createFileRoute('/e/$sessionId/')({
+export const Route = createFileRoute('/_editor/e/$sessionId/')({
   component: EditorPage,
 })
 

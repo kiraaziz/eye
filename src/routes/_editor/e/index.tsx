@@ -22,10 +22,10 @@ import {
   Trash2,
   Volume2,
 } from 'lucide-react'
-import { useRecordingsList } from '@/lib/loader/useRecordings'
-import type { RecordingListItem } from '@/types/recording'
+import { useRecordingsList } from '@/lib/data/records'
+import { RecordingListItem } from 'types/recording'
 
-export const Route = createFileRoute('/e/')({
+export const Route = createFileRoute('/_editor/e/')({
   component: Library,
 })
 

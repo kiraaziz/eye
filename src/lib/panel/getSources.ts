@@ -1,8 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
 import { toast } from "sonner"
-import { UseGetSourcesReturn } from "@/types/sources"
+import { UseGetSourcesReturn } from 'types/configs'
 
-export function useGetSources(): UseGetSourcesReturn {
+export const QUALITY_PRESETS = {
+    low: { width: 1280, height: 720, frameRate: 24, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 96_000 },
+    medium: { width: 1920, height: 1080, frameRate: 30, videoBitsPerSecond: 6_000_000, audioBitsPerSecond: 128_000 },
+    high: { width: 1920, height: 1080, frameRate: 60, videoBitsPerSecond: 12_000_000, audioBitsPerSecond: 160_000 },
+    ultra: { width: 2560, height: 1440, frameRate: 60, videoBitsPerSecond: 20_000_000, audioBitsPerSecond: 192_000 },
+} as const
+
+export function getSources(): UseGetSourcesReturn {
     const [cameras, setCameras] = useState<MediaDeviceInfo[]>([])
     const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
     const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([])
@@ -55,8 +62,8 @@ export function useGetSources(): UseGetSourcesReturn {
         microphones,
         speakers,
         screens,
-        error,
         loading,
+        error,
         retry: loadDevices
     }
 }

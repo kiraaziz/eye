@@ -9,72 +9,65 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ERouteImport } from './routes/e'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EIndexRouteImport } from './routes/e/index'
-import { Route as ESessionIdIndexRouteImport } from './routes/e/$sessionId/index'
+import { Route as EditorERouteImport } from './routes/_editor/e'
+import { Route as EditorEIndexRouteImport } from './routes/_editor/e/index'
+import { Route as EditorESessionIdIndexRouteImport } from './routes/_editor/e/$sessionId/index'
 
-const ERoute = ERouteImport.update({
-  id: '/e',
-  path: '/e',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EIndexRoute = EIndexRouteImport.update({
+const EditorERoute = EditorERouteImport.update({
+  id: '/_editor/e',
+  path: '/e',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorEIndexRoute = EditorEIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ERoute,
+  getParentRoute: () => EditorERoute,
 } as any)
-const ESessionIdIndexRoute = ESessionIdIndexRouteImport.update({
+const EditorESessionIdIndexRoute = EditorESessionIdIndexRouteImport.update({
   id: '/$sessionId/',
   path: '/$sessionId/',
-  getParentRoute: () => ERoute,
+  getParentRoute: () => EditorERoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/e': typeof ERouteWithChildren
-  '/e/': typeof EIndexRoute
-  '/e/$sessionId/': typeof ESessionIdIndexRoute
+  '/e': typeof EditorERouteWithChildren
+  '/e/': typeof EditorEIndexRoute
+  '/e/$sessionId/': typeof EditorESessionIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/e': typeof EIndexRoute
-  '/e/$sessionId': typeof ESessionIdIndexRoute
+  '/e': typeof EditorEIndexRoute
+  '/e/$sessionId': typeof EditorESessionIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/e': typeof ERouteWithChildren
-  '/e/': typeof EIndexRoute
-  '/e/$sessionId/': typeof ESessionIdIndexRoute
+  '/_editor/e': typeof EditorERouteWithChildren
+  '/_editor/e/': typeof EditorEIndexRoute
+  '/_editor/e/$sessionId/': typeof EditorESessionIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/e' | '/e/' | '/e/$sessionId/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/e' | '/e/$sessionId'
-  id: '__root__' | '/' | '/e' | '/e/' | '/e/$sessionId/'
+  id: '__root__' | '/' | '/_editor/e' | '/_editor/e/' | '/_editor/e/$sessionId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ERoute: typeof ERouteWithChildren
+  EditorERoute: typeof EditorERouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/e': {
-      id: '/e'
-      path: '/e'
-      fullPath: '/e'
-      preLoaderRoute: typeof ERouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -82,38 +75,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/e/': {
-      id: '/e/'
+    '/_editor/e': {
+      id: '/_editor/e'
+      path: '/e'
+      fullPath: '/e'
+      preLoaderRoute: typeof EditorERouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_editor/e/': {
+      id: '/_editor/e/'
       path: '/'
       fullPath: '/e/'
-      preLoaderRoute: typeof EIndexRouteImport
-      parentRoute: typeof ERoute
+      preLoaderRoute: typeof EditorEIndexRouteImport
+      parentRoute: typeof EditorERoute
     }
-    '/e/$sessionId/': {
-      id: '/e/$sessionId/'
+    '/_editor/e/$sessionId/': {
+      id: '/_editor/e/$sessionId/'
       path: '/$sessionId'
       fullPath: '/e/$sessionId/'
-      preLoaderRoute: typeof ESessionIdIndexRouteImport
-      parentRoute: typeof ERoute
+      preLoaderRoute: typeof EditorESessionIdIndexRouteImport
+      parentRoute: typeof EditorERoute
     }
   }
 }
 
-interface ERouteChildren {
-  EIndexRoute: typeof EIndexRoute
-  ESessionIdIndexRoute: typeof ESessionIdIndexRoute
+interface EditorERouteChildren {
+  EditorEIndexRoute: typeof EditorEIndexRoute
+  EditorESessionIdIndexRoute: typeof EditorESessionIdIndexRoute
 }
 
-const ERouteChildren: ERouteChildren = {
-  EIndexRoute: EIndexRoute,
-  ESessionIdIndexRoute: ESessionIdIndexRoute,
+const EditorERouteChildren: EditorERouteChildren = {
+  EditorEIndexRoute: EditorEIndexRoute,
+  EditorESessionIdIndexRoute: EditorESessionIdIndexRoute,
 }
 
-const ERouteWithChildren = ERoute._addFileChildren(ERouteChildren)
+const EditorERouteWithChildren =
+  EditorERoute._addFileChildren(EditorERouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ERoute: ERouteWithChildren,
+  EditorERoute: EditorERouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

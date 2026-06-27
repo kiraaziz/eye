@@ -4,23 +4,18 @@ import { Camera, Check, Gauge, Mic, Monitor, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { motion } from 'framer-motion'
-import { QualityPreset } from '@/lib/configs/qualityPresets'
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
-import { useMicLevel } from '@/lib/configs/useMicLevel'
-import { useSpeakerLevel } from '@/lib/configs/useSpeakerLevel'
-import { ScreenSource } from '@/types/screen'
 import { toast } from 'sonner'
 import TopBar from '../global/TopBar'
+import { useMicLevel, useSpeakerLevel } from '@/lib/panel/audioLevels'
+import { ScreenSource } from 'types/screen'
+import { QualityPreset, RecordingConfig } from 'types/configs'
 
 export default function ConfigPannel({
     cameras, microphones, speakers, screens, loading,
     setCountdown,
-    cameraId, setCameraId,
-    micId, setMicId,
-    speakerId, setSpeakerId,
-    screenId, setScreenId,
+    config, updateConfig,
     captureMode, setCaptureMode,
-    quality, setQuality,
 }: {
     cameras: MediaDeviceInfo[]
     microphones: MediaDeviceInfo[]
@@ -30,32 +25,18 @@ export default function ConfigPannel({
 
     setCountdown: Dispatch<SetStateAction<boolean>>
 
-    cameraId: null
-    setCameraId: Dispatch<SetStateAction<null>>
-
-    micId: string | null
-    setMicId: Dispatch<SetStateAction<string | null>>
-
-    speakerId: string | null
-    setSpeakerId: Dispatch<SetStateAction<string | null>>
-
-    screenId: string | null
-    setScreenId: Dispatch<SetStateAction<string | null>>
+    config: RecordingConfig
+    updateConfig: (patch: Partial<RecordingConfig>) => void
 
     captureMode: 'window' | 'screen'
-    setCaptureMode: Dispatch<
-        SetStateAction<'window' | 'screen'>
-    >
-
-    quality: QualityPreset
-    setQuality: Dispatch<SetStateAction<QualityPreset>>
+    setCaptureMode: Dispatch<SetStateAction<'window' | 'screen'>>
 }) {
 
     const [open, setOpen] = useState(false)
 
     const constraintsRef = useRef(null)
-    const { micLevel } = useMicLevel(micId)
-    const { speakerLevel } = useSpeakerLevel(!!speakerId && speakerId !== 'none')
+    const { micLevel } = useMicLevel(config.micId)
+    const { speakerLevel } = useSpeakerLevel(!!config.speakerId && config.speakerId !== 'none')
 
     const filteredScreens = screens.filter((s) => {
         if (captureMode === 'screen') return s.id.startsWith('screen')
@@ -71,7 +52,7 @@ export default function ConfigPannel({
     }
 
     const handleSelectScreen = async (id: string, displayId: string | null) => {
-        setScreenId(id)
+        updateConfig({ screenId: id })
         displayId && (await window.ipcRenderer.invoke('screen:setSource', displayId))
         setOpen(false)
     }
@@ -79,17 +60,17 @@ export default function ConfigPannel({
     useEffect(() => {
         if (loading) return
 
-        if (!cameraId && cameras.length > 0) {
-            setCameraId((cameras as any)[0].deviceId)
+        if (!config.cameraId && cameras.length > 0) {
+            updateConfig({ cameraId: cameras[0].deviceId })
         }
 
-        if (!micId && microphones.length > 0) {
-            setMicId(microphones[0].deviceId)
+        if (!config.micId && microphones.length > 0) {
+            updateConfig({ micId: microphones[0].deviceId })
         }
-        if (!speakerId && speakers.length > 0) {
-            setSpeakerId(speakers[0].deviceId)
+        if (!config.speakerId && speakers.length > 0) {
+            updateConfig({ speakerId: speakers[0].deviceId })
         }
-        if (!screenId && screens.length > 0) {
+        if (!config.screenId && screens.length > 0) {
             handleSelectScreen(screens[0].id, screens[0].displayId)
         }
     }, [loading, screens])
@@ -120,7 +101,7 @@ export default function ConfigPannel({
                             <button
                                 onClick={() => {
                                     setCaptureMode('screen')
-                                    setScreenId(null)
+                                    updateConfig({ screenId: null })
                                 }}
                                 className={cn(
                                     captureMode === 'screen'
@@ -146,7 +127,7 @@ export default function ConfigPannel({
                             <button
                                 onClick={() => {
                                     setCaptureMode('window')
-                                    setScreenId(null)
+                                    updateConfig({ screenId: null })
                                 }}
                                 className={cn(
                                     captureMode === 'window'
@@ -185,8 +166,8 @@ export default function ConfigPannel({
                                     <PopoverTrigger className="flex-1" render={<div className="w-full flex-1" />}>
                                         <Button variant="outline" className="w-full flex-1 justify-start truncate">
                                             <p className="max-w-40">
-                                                {screenId && filteredScreens.find((s) => s.id === screenId)
-                                                    ? filteredScreens.find((s) => s.id === screenId)!.name
+                                                {config.screenId && filteredScreens.find((s) => s.id === config.screenId)
+                                                    ? filteredScreens.find((s) => s.id === config.screenId)!.name
                                                     : 'Choose screen'}
                                             </p>
                                         </Button>
@@ -202,7 +183,7 @@ export default function ConfigPannel({
                                                 <div className="flex items-start truncate p-2 text-nowrap">
                                                     <div
                                                         className={cn(
-                                                            screenId === m.id ? 'w-4' : 'w-0 overflow-hidden',
+                                                            config.screenId === m.id ? 'w-4' : 'w-0 overflow-hidden',
                                                             'mr-2 flex h-4 items-center justify-center rounded-full bg-primary text-primary-foreground duration-200 ease-in-out'
                                                         )}
                                                     >
@@ -220,7 +201,7 @@ export default function ConfigPannel({
                                     <Camera className="absolute" />
                                 </Button>
                                 <div className="min-w-0 flex-1">
-                                    <Select value={cameraId || ''} onValueChange={setCameraId as any}>
+                                    <Select value={config.cameraId || ''} onValueChange={(v) => updateConfig({ cameraId: v })}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Choose camera" />
                                         </SelectTrigger>
@@ -240,7 +221,7 @@ export default function ConfigPannel({
                                     <Gauge className="absolute" />
                                 </Button>
                                 <div className="min-w-0 flex-1">
-                                    <Select value={quality} onValueChange={(v) => setQuality(v as QualityPreset)}>
+                                    <Select value={config.quality} onValueChange={(v) => updateConfig({ quality: v as QualityPreset })}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Choose quality" />
                                         </SelectTrigger>
@@ -263,7 +244,7 @@ export default function ConfigPannel({
                                     <Mic className="absolute" />
                                 </Button>
                                 <div className="min-w-0 flex-1">
-                                    <Select value={micId || ''} onValueChange={setMicId}>
+                                    <Select value={config.micId || ''} onValueChange={(v) => updateConfig({ micId: v })}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Choose microphone" />
                                         </SelectTrigger>
@@ -287,7 +268,7 @@ export default function ConfigPannel({
                                     <Volume2 className="absolute" />
                                 </Button>
                                 <div className="min-w-0 flex-1">
-                                    <Select value={speakerId || ''} onValueChange={setSpeakerId}>
+                                    <Select value={config.speakerId || ''} onValueChange={(v) => updateConfig({ speakerId: v })}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Choose speaker" />
                                         </SelectTrigger>
@@ -306,7 +287,7 @@ export default function ConfigPannel({
                         <div className="relative flex flex-col items-center justify-center pt-7">
                             <Button
                                 onClick={() => {
-                                    if (!screenId) {
+                                    if (!config.screenId) {
                                         toast.error("Please select a screen before starting the recording.")
                                         return
                                     }

@@ -1,35 +1,23 @@
-import type {
-  RecordingAssets,
-  RecordingConfig,
-  SavedRecording,
-  TrackType
-} from '@/types/recording'
-import { useCallback, useRef, useState } from 'react'
-import { useMouseTracker } from './mouse/useMouseTracker'
-import { recordStream } from './recordStream'
-import { saveTrack } from './saveTrack'
+import { useCallback, useRef, useState } from 'react' 
+import { recordStream } from './stream/recordStream'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { QUALITY_PRESETS } from '../configs/qualityPresets'
-import { captureThumbnail } from './captureThumbnail'
+import { captureThumbnail } from './stream/captureThumbnail'
+import { QUALITY_PRESETS } from './getSources'
+import { mouseTracker } from './stream/mouseTracker'
+import { saveTrack } from './stream/saveTrack'
+import { saveThumbnail } from './stream/saveThumbnail'
+import { RecordingAssets, RecordingConfig, TrackType } from 'types/configs'
+import { SavedRecording } from 'types/recording'
 
-export async function saveThumbnail(
-  type: 'camera' | 'screen',
-  buffer: ArrayBuffer,
-  sessionId: string
-): Promise<string> {
-  const { filePath } = await window.ipcRenderer.invoke('record:saveThumbnail', { type, buffer, sessionId })
-  return filePath
-}
-
-export function useStartRecording(config: RecordingConfig) {
+export function startRecording(config: RecordingConfig) {
   const navigate = useNavigate()
 
   const [isRecording, setIsRecording] = useState(false)
 
   const stoppers = useRef<Array<() => void>>([])
   const streamsRef = useRef<MediaStream[]>([])
-  const { startTracking, stopTracking } = useMouseTracker()
+  const { startTracking, stopTracking } = mouseTracker()
 
   const start = useCallback(async () => {
     if (isRecording) return
@@ -146,7 +134,6 @@ export function useStartRecording(config: RecordingConfig) {
           savedPaths[recorders[i].type] = await saveTrack(recorders[i].type, buffers[i], sessionId)
         }
 
-        // persist thumbnails alongside the tracks
         for (const [type, blob] of Object.entries(thumbnails)) {
           if (blob) await saveTrack(`${type}-thumb` as TrackType, await blob.arrayBuffer(), sessionId)
         }
