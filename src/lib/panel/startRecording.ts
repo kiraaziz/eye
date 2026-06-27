@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react' 
+import { useCallback, useRef, useState } from 'react'
 import { recordStream } from './stream/recordStream'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -50,13 +50,23 @@ export function startRecording(config: RecordingConfig) {
 
       if (config.speakerId && config.speakerId !== 'none') {
         try {
-          const speakerStream = await navigator.mediaDevices.getUserMedia({
-            audio: { deviceId: { exact: config.speakerId } },
-            video: false,
+          await window.ipcRenderer.invoke('enable-loopback-audio')
+
+          const loopbackStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true,
           })
-          streams.push(speakerStream)
+
+          await window.ipcRenderer.invoke('disable-loopback-audio')
+
+          loopbackStream.getVideoTracks().forEach((t) => {
+            loopbackStream.removeTrack(t)
+            t.stop()
+          })
+
+          streams.push(loopbackStream)
           const rec = recordStream(
-            new MediaStream(speakerStream.getAudioTracks()),
+            loopbackStream,
             'audio/webm;codecs=opus',
             { audioBitsPerSecond: quality.audioBitsPerSecond }
           )

@@ -6,11 +6,11 @@ import {
   useVideoConfig,
 } from 'remotion'
 import { useRef } from 'react'
-import type { RecordingResult } from '@/lib/types/recording'
 import type { ClipTracks, ZoomSegment, ZoomSettings } from '@/lib/editor/types'
 import { getRecordedDisplay } from '@/lib/editor/display'
 import { computeCameraAtTime } from '@/lib/editor/zoom'
 import type { DisplayPoint } from '@/lib/editor/mouse'
+import { RecordingResult } from 'types/recording'
 
 export type RecordingCompositionProps = {
   data: RecordingResult
