@@ -66,7 +66,7 @@ app.whenReady().then(() => {
 
     } else {
       win.setResizable(true)
-      win.setSize(1024, 720)
+      win.setSize(1250, 760)
       win.center()
     }
   })

@@ -13,7 +13,10 @@ export interface UseGetSourcesReturn {
 
 export type TrackType = 'camera' | 'mic' | 'speaker' | 'screen'
 
-export type RecordingAssets = Record<TrackType, string | null>
+export type RecordingAssets = Record<TrackType, string | null> & {
+    cameraThumbnail: string | null
+    screenThumbnail: string | null
+}
 
 export type RecordingConfig = {
     [K in TrackType as `${K}Id`]: string | null

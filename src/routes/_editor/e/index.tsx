@@ -12,18 +12,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import Loader from '@/components/global/Loader'
-import { cn } from '@/lib/utils'
 import {
-  Camera,
   CirclePlus,
   Clock,
   Film,
-  Mic,
   Trash2,
-  Volume2,
 } from 'lucide-react'
 import { useRecordingsList } from '@/lib/data/records'
 import { RecordingListItem } from 'types/recording'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export const Route = createFileRoute('/_editor/e/')({
   component: Library,
@@ -59,23 +56,35 @@ function Library() {
     setPendingDelete(null)
   }
 
+
+
+
+
+  if (loading) return <Loader />
+
   return (
-    <div className="h-full">
-      <main className="flex-1 overflow-y-auto p-6">
-        {loading && (
-          <div className="flex h-64 items-center justify-center">
-            <Loader />
+    <div className="h-full relative z-10">
+      {recordings.length === 0 && (
+        <div className="flex h-full flex-col items-center justify-center gap-4">
+          <img src="./logo.svg" className="h-20" />
+          <div className="text-center">
+            <p className="font-medium">No recordings yet</p>
+            <p className="text-sm text-muted-foreground">
+              Start your first screen recording
+            </p>
           </div>
-        )}
-        {!loading && recordings.length === 0 && (
-          <div className="flex h-64 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/20">
-            <Film className="size-10 text-muted-foreground" />
-            <div className="text-center">
-              <p className="font-medium">No recordings yet</p>
-              <p className="text-sm text-muted-foreground">
-                Start your first screen recording
-              </p>
-            </div>
+          <Link to="/">
+            <Button>
+              <CirclePlus className="size-4" />
+              New recording
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {recordings.length > 0 && (
+        <div className="grid gap-4 p-4 sm:p-6 lg:p-14 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className='col-span-full flex items-center justify-end'>
             <Link to="/">
               <Button>
                 <CirclePlus className="size-4" />
@@ -83,63 +92,63 @@ function Library() {
               </Button>
             </Link>
           </div>
-        )}
-
-        {!loading && recordings.length > 0 && (
-          <div className="grid gap-3">
-            {recordings.map((item) => (
-              <Link
-                key={item.sessionId}
-                to="/e/$sessionId"
-                params={{ sessionId: item.sessionId }}
-                className="block"
-              >
-                <article
-                  className={cn(
-                    'flex items-center justify-between rounded-xl border border-border bg-card p-4',
-                    'transition-colors hover:border-primary/40 hover:bg-muted/30'
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Film className="size-5" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{formatDate(item.startedAt)}</p>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {formatDuration(item.durationMs)}
-                        </span>
-                        {item.hasScreen && <Film className="size-3" />}
-                        {item.hasCamera && <Camera className="size-3" />}
-                        {item.hasMic && <Mic className="size-3" />}
-                        {item.hasSpeaker && <Volume2 className="size-3" />}
-                      </div>
+          {recordings.map((item) => (
+            <Link
+              key={item.sessionId}
+              to="/e/$sessionId"
+              params={{ sessionId: item.sessionId }}
+              className="overflow-hidden rounded-xl relative bg-background/30 hover:bg-background! backdrop-blur-2xl border border-input/40 group"
+            >
+              <div className='w-full h-60 absolute top-0 left-0 z-1 flex items-center justify-center bg-background/40 backdrop-blur-xs opacity-0 ease-in-out duration-500 group-hover:opacity-100'>
+                <img src='/svg/wings.svg' className='h-35 -translate-y-5' />
+                <h1 className='absolute font-medium translate-y-4'>OPEN</h1>
+              </div>
+              <Avatar className='w-full h-60 object-cover object-top-left rounded-none'>
+                <AvatarImage src={item.screenThumbnail || ""} className='rounded-none object-cover group-hover:scale-110 ease-in-out duration-300' />
+                <AvatarFallback className='rounded-none'>
+                  <Film className="size-10" />
+                </AvatarFallback>
+              </Avatar>
+              {item.cameraThumbnail && <Avatar className='w-20 h-20 object-cover object-top-left rounded-md absolute top-35 right-5 shadow-2xl'>
+                <AvatarImage src={item.cameraThumbnail || ""} className='rounded-none object-cover' />
+                <AvatarFallback className='rounded-none'>
+                  <Film className="size-10" />
+                </AvatarFallback>
+              </Avatar>}
+              <div className='bortder-b w-full' />
+              <div className='flex items-center justify-between p-4'>
+                <div className="flex items-center gap-4">
+                  <img src="./logo.svg" className="h-7" />
+                  <div>
+                    <p className="font-medium">{formatDate(item.startedAt)}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {formatDuration(item.durationMs)}
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Edit</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setPendingDelete(item)
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setPendingDelete(item)
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <AlertDialog
         open={!!pendingDelete}
@@ -160,7 +169,6 @@ function Library() {
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={deleting}
-              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
@@ -170,3 +178,5 @@ function Library() {
     </div>
   )
 }
+
+

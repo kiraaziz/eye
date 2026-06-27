@@ -353,7 +353,9 @@ const listRecord = async () => {
         hasScreen: !!manifest.assets.screen,
         hasCamera: !!manifest.assets.camera,
         hasMic: !!manifest.assets.mic,
-        hasSpeaker: !!manifest.assets.speaker
+        hasSpeaker: !!manifest.assets.speaker,
+        screenThumbnail: manifest.assets.screenThumbnail ?? null,
+        cameraThumbnail: manifest.assets.cameraThumbnail ?? null
       });
     } catch {
     }
@@ -446,7 +448,7 @@ app.whenReady().then(() => {
       win.setBounds({ x, y, width, height });
     } else {
       win.setResizable(true);
-      win.setSize(1024, 720);
+      win.setSize(1250, 760);
       win.center();
     }
   });

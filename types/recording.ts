@@ -28,4 +28,6 @@ export type RecordingListItem = {
     hasCamera: boolean
     hasMic: boolean
     hasSpeaker: boolean
+    screenThumbnail: string | null
+    cameraThumbnail: string | null
 }

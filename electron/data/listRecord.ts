@@ -1,22 +1,14 @@
-import { RecordingResult } from "types/recording"
+import { RecordingResult, RecordingListItem } from "types/recording"
 import { getRecordingsRoot } from "../utils/mediaProtocol"
 import path from 'node:path'
 import fs from 'node:fs'
 
-export const listRecord = async () => {
+export const listRecord = async (): Promise<RecordingListItem[]> => {
     const root = getRecordingsRoot()
     if (!fs.existsSync(root)) return []
 
     const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory())
-    const items: Array<{
-        sessionId: string
-        startedAt: number
-        durationMs: number
-        hasScreen: boolean
-        hasCamera: boolean
-        hasMic: boolean
-        hasSpeaker: boolean
-    }> = []
+    const items: RecordingListItem[] = []
 
     for (const entry of entries) {
         const manifestPath = path.join(root, entry.name, 'manifest.json')
@@ -32,6 +24,8 @@ export const listRecord = async () => {
                 hasCamera: !!manifest.assets.camera,
                 hasMic: !!manifest.assets.mic,
                 hasSpeaker: !!manifest.assets.speaker,
+                screenThumbnail: manifest.assets.screenThumbnail ?? null,
+                cameraThumbnail: manifest.assets.cameraThumbnail ?? null,
             })
         } catch { }
     }

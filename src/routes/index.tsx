@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
-import Loader from '@/components/global/Loader' 
+import Loader from '@/components/global/Loader'
 import CountdownOverlay from '@/components/recorder/CountdownOverlay'
 import CameraBubble from '@/components/recorder/CameraBubble'
 import Overlay from '@/components/recorder/Overlay'
 import ConfigPannel from '@/components/recorder/ConfigPannel'
 import { Button } from '@/components/ui/button'
-import { RecordingConfig } from 'types/recording'
 import { getSources } from '@/lib/panel/getSources'
 import { startRecording } from '@/lib/panel/startRecording'
+import { RecordingConfig } from 'types/configs'
 
 export const Route = createFileRoute("/")({
   component: NewRecording,
@@ -55,9 +55,9 @@ function NewRecording() {
           handleRec()
         }}
       />}
-
-      {!countdown && isRecording && <Button className='absolute' onClick={handleRec}>
-        Stop
+      {!countdown && isRecording && <Button className='absolute bottom-10 right-10' variant="outline" size="lg" onClick={handleRec}>
+        <div className='h-3.5 w-3.5 bg-destructive mr-0.5 rounded' />
+        Stop recording
       </Button>}
       {!countdown && !isRecording && <ConfigPannel
         {...{

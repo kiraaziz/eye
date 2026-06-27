@@ -24,7 +24,7 @@ export default function TopBar({ mode = "normal" }: { mode: "record" | "normal" 
     }, [])
 
     return (
-        <div className={cn(mode === "normal" && "top-bar", "flex w-full items-center justify-between border-b border-border/50 bg-muted p-2 relative")}>
+        <div className={cn(mode === "normal" && "top-bar", "z-100 flex w-full items-center justify-between border-b border-border/50 bg-muted p-2 relative")}>
             <div className="w-[40%] opacity-60 top-bar h-full absolute top-0 right-0 bg-linear-to-l from-secondary/10 via-primary/5 pointer-events-none" />
             <div className="flex items-center justify-center gap-2">
                 {mode === "record" ? <Link to="/e">
