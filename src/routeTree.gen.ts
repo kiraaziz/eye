@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ERouteImport } from './routes/e'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EIndexRouteImport } from './routes/e/index'
-import { Route as ESessionIdRouteImport } from './routes/e/$sessionId'
+import { Route as ESessionIdIndexRouteImport } from './routes/e/$sessionId/index'
 
 const ERoute = ERouteImport.update({
   id: '/e',
@@ -29,36 +29,36 @@ const EIndexRoute = EIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ERoute,
 } as any)
-const ESessionIdRoute = ESessionIdRouteImport.update({
-  id: '/$sessionId',
-  path: '/$sessionId',
+const ESessionIdIndexRoute = ESessionIdIndexRouteImport.update({
+  id: '/$sessionId/',
+  path: '/$sessionId/',
   getParentRoute: () => ERoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/e': typeof ERouteWithChildren
-  '/e/$sessionId': typeof ESessionIdRoute
   '/e/': typeof EIndexRoute
+  '/e/$sessionId/': typeof ESessionIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/e/$sessionId': typeof ESessionIdRoute
   '/e': typeof EIndexRoute
+  '/e/$sessionId': typeof ESessionIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/e': typeof ERouteWithChildren
-  '/e/$sessionId': typeof ESessionIdRoute
   '/e/': typeof EIndexRoute
+  '/e/$sessionId/': typeof ESessionIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/e' | '/e/$sessionId' | '/e/'
+  fullPaths: '/' | '/e' | '/e/' | '/e/$sessionId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/e/$sessionId' | '/e'
-  id: '__root__' | '/' | '/e' | '/e/$sessionId' | '/e/'
+  to: '/' | '/e' | '/e/$sessionId'
+  id: '__root__' | '/' | '/e' | '/e/' | '/e/$sessionId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -89,24 +89,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EIndexRouteImport
       parentRoute: typeof ERoute
     }
-    '/e/$sessionId': {
-      id: '/e/$sessionId'
+    '/e/$sessionId/': {
+      id: '/e/$sessionId/'
       path: '/$sessionId'
-      fullPath: '/e/$sessionId'
-      preLoaderRoute: typeof ESessionIdRouteImport
+      fullPath: '/e/$sessionId/'
+      preLoaderRoute: typeof ESessionIdIndexRouteImport
       parentRoute: typeof ERoute
     }
   }
 }
 
 interface ERouteChildren {
-  ESessionIdRoute: typeof ESessionIdRoute
   EIndexRoute: typeof EIndexRoute
+  ESessionIdIndexRoute: typeof ESessionIdIndexRoute
 }
 
 const ERouteChildren: ERouteChildren = {
-  ESessionIdRoute: ESessionIdRoute,
   EIndexRoute: EIndexRoute,
+  ESessionIdIndexRoute: ESessionIdIndexRoute,
 }
 
 const ERouteWithChildren = ERoute._addFileChildren(ERouteChildren)

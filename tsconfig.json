@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
+        "src/*"
       ]
     },
     "target": "ES2020",
@@ -33,8 +33,9 @@
     "electron",
     "lib",
     "components",
-    "hooks"
-, "types/recording.ts"  ],
+    "hooks",
+    "types/recording.ts"
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

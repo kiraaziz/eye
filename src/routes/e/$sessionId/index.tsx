@@ -4,10 +4,10 @@ import { Editor } from '@/components/editor/Editor'
 import Loader from '@/components/global/Loader'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { RecordingResult } from '@/types/recording'
+import { RecordingResult } from '@/../types/recording'
 import { useRecording } from '@/lib/loader/useRecordings'
 
-export const Route = createFileRoute('/e/$sessionId')({
+export const Route = createFileRoute('/e/$sessionId/')({
   component: EditorPage,
 })
 
